@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Dashboard tổng hợp</title>
+<title>Dashboard &amp; Admin — Quản lý sự kiện</title>
 <script src="api.js"></script>
 <style>
+
   @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
   :root {
-    --primary:#2f4b3c; --primary-dark:#1f3527;
+    --primary:#E2231A; --primary-dark:#B01810;
     --success:#0e9f6e; --danger:#f05252; --warning:#e3a008;
-    --bg:#f6f5f1; --card:#ffffff; --border:#e2e8f0;
+    --bg:#faf6f5; --card:#ffffff; --border:#e2e8f0;
     --text:#1e293b; --muted:#64748b; --radius:16px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -100,11 +101,90 @@
     .header{flex-direction:column;align-items:stretch}
     .event-select{width:100%}
   }
+
+  .page-switch{display:flex;gap:8px;margin-bottom:18px;background:white;padding:6px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  .page-switch-btn{flex:1;padding:12px;border:none;border-radius:9px;background:none;font-family:inherit;font-size:14px;font-weight:800;color:var(--muted);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .page-switch-btn.active{background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);color:white}
+
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;color:var(--text);outline:none}
+  .field input:focus{border-color:var(--primary)}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .toggle-row{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer}
+  .toggle-row input{width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
+
+  .rte-toolbar{display:flex;gap:6px;margin-bottom:6px}
+  .rte-btn{width:32px;height:32px;border:2px solid var(--border);border-radius:7px;background:white;cursor:pointer;font-size:13px;color:var(--text)}
+  .rte-btn.active{border-color:var(--primary);background:var(--bg);color:var(--primary)}
+  .rte-size{padding:6px 10px;border:2px solid var(--border);border-radius:7px;font-family:inherit;font-size:12px;background:white;color:var(--text);cursor:pointer}
+  .rte-editable{width:100%;min-height:90px;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;color:var(--text);outline:none;line-height:1.6;overflow-y:auto}
+  .rte-editable *{font-family:inherit!important;color:inherit!important}
+  .rte-editable:focus{border-color:var(--primary)}
+  .rte-editable b, .rte-editable strong{font-weight:700}
+  .color-row{display:flex;align-items:center;gap:10px}
+  .color-row input[type=color]{width:44px;height:38px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px}
+
+
+  .q-card{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px}
+  .q-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .q-type-pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:white;border:1px solid var(--border);color:var(--muted)}
+  .q-actions{margin-left:auto;display:flex;gap:4px}
+  .icon-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:white;cursor:pointer;font-size:13px;color:var(--muted)}
+  .icon-btn:disabled{opacity:.35;cursor:not-allowed}
+  .opt-row{display:flex;gap:6px;margin-bottom:6px}
+  .opt-row input{flex:1}
+  .add-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .checkbox-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:8px}
+
+
+  .preview-link{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:6px}
+  .preview-link a{color:var(--primary);font-weight:700;text-decoration:none}
+
+  .event-meta{font-size:12px;color:var(--muted);background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:14px}
+  .event-meta code{background:white;padding:2px 6px;border-radius:5px;font-size:11px}
+
+  .link-card{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .link-block{flex:1;min-width:220px}
+  .link-block-title{font-size:13px;font-weight:700;margin-bottom:8px}
+  .link-row{display:flex;gap:8px;margin-bottom:8px}
+  .link-row input{flex:1;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;color:var(--muted);background:var(--bg);outline:none}
+  .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px;min-width:220px}
+  .qr-wrap svg{display:block;width:220px;height:220px}
+  .qr-dl-row{display:flex;gap:8px}
+  .qr-wrap canvas{display:block;border-radius:6px}
+  .qr-caption{font-size:11px;color:var(--muted);text-align:center}
+  .link-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:640px){.link-grid{grid-template-columns:1fr}}
+
+  .preview-table-wrap{overflow-x:auto;border:1.5px solid var(--border);border-radius:10px;margin-top:10px;max-height:320px}
+  .preview-table{border-collapse:collapse;font-size:12px;white-space:nowrap}
+  .preview-table th{background:var(--bg);padding:6px 10px;border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--muted);position:sticky;top:0}
+  .preview-table td{padding:6px 10px;border:1px solid var(--border);color:var(--text)}
+  .preview-table tr:first-child td{background:#fffbeb}
+  .colmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .colmap-field{display:flex;flex-direction:column;gap:4px}
+  .colmap-field label{font-size:12px;font-weight:600;color:var(--muted)}
+  .colmap-field input{padding:9px 11px;border:2px solid var(--border);border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none}
+  .colmap-field input:focus{border-color:var(--primary)}
+  .colmap-hint{font-size:11px;color:#9c9a8e;margin-top:3px}
+  .colmap-section-title{font-size:12px;font-weight:700;color:var(--text);margin:18px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+  @media(max-width:640px){.colmap-grid{grid-template-columns:1fr}}
+
+  @media(max-width:520px){
+    .field-row{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
 <div class="page-center">
 
+<div class="page-switch">
+  <button class="page-switch-btn active" id="page-btn-dashboard" onclick="goToPage('dashboard')">📊 Dashboard</button>
+  <button class="page-switch-btn" id="page-btn-admin" onclick="goToPage('admin')">⚙️ Admin</button>
+</div>
+
+<div id="view-dashboard">
 <div class="header">
   <div>
     <h1>Dashboard tổng hợp</h1>
@@ -207,7 +287,275 @@
     </div>
   </div>
 </div>
+</div>
 
+<div id="view-admin" class="hidden">
+<!-- MÀN HÌNH NHẬP ADMIN KEY — phải nhập đúng key trước khi thấy nội dung Admin.
+     Key chỉ lưu trong biến JS của tab hiện tại (không dùng localStorage), nên
+     mỗi lần mở lại trang dashboard.html (hoặc bấm tab Admin sau khi tải lại
+     trang) sẽ phải nhập lại. Việc xác thực thật sự diễn ra ở server (GAS so
+     sánh ADMIN_KEY) — màn hình này chỉ tránh hiện nhầm UI Admin cho người
+     chưa có key, không tự nó là lớp bảo mật. -->
+<div id="gate-screen" class="card" style="max-width:420px;margin:60px auto">
+  <div class="card-title">Đăng nhập Admin</div>
+  <div class="field"><label>Admin key</label><input type="password" id="gate-key-input" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') admUnlockAdmin()"></div>
+  <button class="btn btn-primary btn-full" onclick="admUnlockAdmin()" id="gate-btn">Vào trang Admin</button>
+  <div id="gate-status" style="margin-top:12px"></div>
+</div>
+
+<div id="admin-root" class="hidden">
+
+<div class="header">
+  <div>
+    <h1>Admin — Quản lý sự kiện</h1>
+    <p>Chọn sự kiện để soạn câu hỏi khảo sát và chỉnh giao diện</p>
+  </div>
+  <select class="event-select" id="adm-event-select" onchange="admOnEventChange()"><option>Đang tải danh sách sự kiện...</option></select>
+</div>
+
+<div id="global-status"></div>
+
+<div class="tabs">
+  <button class="tab-btn" id="tab-newevent" onclick="admSwitchTab('newevent')">+ Tạo sự kiện mới</button>
+  <button class="tab-btn active" id="tab-questions" onclick="admSwitchTab('questions')">Câu hỏi khảo sát</button>
+  <button class="tab-btn" id="tab-config" onclick="admSwitchTab('config')">Cấu hình giao diện</button>
+  <button class="tab-btn" id="tab-columns" onclick="admSwitchTab('columns')">Cấu trúc dữ liệu</button>
+  <button class="tab-btn" id="tab-links" onclick="admSwitchTab('links')">Link &amp; QR</button>
+</div>
+
+<div id="panel-newevent" class="hidden">
+  <div class="card">
+    <div class="card-title">Tạo sự kiện mới</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Hệ thống sẽ tự tạo 1 Google Sheet data mới cho sự kiện này, kèm sẵn 3 tab CauHoi/PhanHoi/Config có header đầy đủ. Tab DanhSach sẽ trống — bạn cần nhập danh sách người tham dự vào dòng 14 trở đi sau khi tạo.</p>
+    <div class="field"><label>Tên sự kiện *</label><input id="ne-TenSuKien" placeholder="VD: Caravan Mèo Vạc 2026"></div>
+    <div class="field-row">
+      <div class="field"><label>Mã sự kiện (để trống = tự sinh)</label><input id="ne-EventId" placeholder="VD: caravanmeovac2026"></div>
+      <div class="field"><label>Tên ngắn (không logo)</label><input id="ne-TenNgan" placeholder="VD: Caravan"></div>
+    </div>
+    <div class="field"><label>Tên chương trình (hiện dưới logo, tuỳ chọn)</label><input id="ne-TenChuongTrinh"></div>
+    <div class="field-row">
+      <div class="field"><label>Thời gian</label><input id="ne-ThoiGian" placeholder="VD: 12 – 14/7/2026"></div>
+      <div class="field"><label>Địa điểm</label><input id="ne-DiaDiem" placeholder="VD: Mèo Vạc, Hà Giang"></div>
+    </div>
+    <div class="field"><label>URL logo sự kiện (tuỳ chọn)</label><input id="ne-Logo" placeholder="https://..."></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Màu chính</label>
+        <div class="color-row"><input type="color" id="ne-MauChuDao-picker" onchange="admSyncNewEventColor('MauChuDao')"><input id="ne-MauChuDao" value="#E2231A"></div>
+      </div>
+      <div class="field">
+        <label>Màu đậm</label>
+        <div class="color-row"><input type="color" id="ne-MauChuDaoDam-picker" onchange="admSyncNewEventColor('MauChuDaoDam')"><input id="ne-MauChuDaoDam" value="#B01810"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" id="create-event-btn" onclick="admCreateNewEvent()">✚ Tạo sự kiện</button>
+    <div id="create-event-status" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div id="adm-no-event-state" class="card empty-state hidden">Chưa có sự kiện nào trong tab "Events" của Sheet trung tâm. Tạo sự kiện đầu tiên ở tab "+ Tạo sự kiện mới" bên trên.</div>
+
+<div id="admin-content" class="hidden">
+  <div class="event-meta" id="event-meta"></div>
+
+  <div id="panel-questions">
+    <div class="card">
+      <div class="card-title">Danh sách câu hỏi</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Thêm, sửa, xoá, sắp xếp câu hỏi cho trang khảo sát của sự kiện này. Bấm "Lưu thay đổi" để áp dụng — không ảnh hưởng đến các phản hồi đã thu thập trước đó.</p>
+      <div id="questions-list"></div>
+      <div class="add-row">
+        <button class="btn btn-outline btn-sm" onclick="admAddQuestion('rating5')">+ Thang điểm 1–5</button>
+        <button class="btn btn-outline btn-sm" onclick="admAddQuestion('nps')">+ NPS 0–10</button>
+        <button class="btn btn-outline btn-sm" onclick="admAddQuestion('choice')">+ Trắc nghiệm (chọn 1)</button>
+        <button class="btn btn-outline btn-sm" onclick="admAddQuestion('checkbox')">+ Checkbox (chọn nhiều)</button>
+        <button class="btn btn-outline btn-sm" onclick="admAddQuestion('dropdown')">+ Dropdown</button>
+        <button class="btn btn-outline btn-sm" onclick="admAddQuestion('text')">+ Câu hỏi mở</button>
+      </div>
+      <button class="btn btn-primary btn-full" style="margin-top:18px" id="save-q-btn" onclick="admSaveQuestions()">💾 Lưu thay đổi</button>
+      <div class="preview-link">🔗 <span id="survey-preview-link"></span></div>
+    </div>
+  </div>
+
+  <div id="panel-config" class="hidden">
+    <div class="card">
+      <div class="card-title">Thông tin sự kiện</div>
+      <div class="field"><label>Tên sự kiện đầy đủ</label><input id="cfg-TenSuKien"></div>
+      <div class="field"><label>Tên ngắn (hiện khi không có logo)</label><input id="cfg-TenNgan"></div>
+      <div class="field"><label>Tên chương trình (hiện dưới logo, để trống nếu không cần)</label><input id="cfg-TenChuongTrinh" placeholder="VD: Hành trình làm chủ 2026"></div>
+      <div class="field-row">
+        <div class="field"><label>Thời gian</label><input id="cfg-ThoiGian" placeholder="VD: 29 – 30/6/2026"></div>
+        <div class="field"><label>Địa điểm</label><input id="cfg-DiaDiem" placeholder="VD: Đà Lạt"></div>
+      </div>
+      <div class="field"><label>URL logo (ảnh PNG/JPG nền trong suốt)</label><input id="cfg-Logo" placeholder="https://..."></div>
+
+      <div class="field">
+        <label>Mô tả trang đăng ký</label>
+        <div class="rte-toolbar" data-target="cfg-MoTaDangKy">
+          <button type="button" class="rte-btn" data-cmd="bold"><b>B</b></button>
+          <select class="rte-size">
+            <option value="">Cỡ chữ</option>
+            <option value="2">Nhỏ</option>
+            <option value="3">Vừa</option>
+            <option value="5">Lớn</option>
+            <option value="6">Rất lớn</option>
+          </select>
+        </div>
+        <div class="rte-editable" id="cfg-MoTaDangKy" contenteditable="true"></div>
+      </div>
+
+      <div class="field">
+        <label>Mô tả trang khảo sát</label>
+        <div class="rte-toolbar" data-target="cfg-MoTaKhaoSat">
+          <button type="button" class="rte-btn" data-cmd="bold"><b>B</b></button>
+          <select class="rte-size">
+            <option value="">Cỡ chữ</option>
+            <option value="2">Nhỏ</option>
+            <option value="3">Vừa</option>
+            <option value="5">Lớn</option>
+            <option value="6">Rất lớn</option>
+          </select>
+        </div>
+        <div class="rte-editable" id="cfg-MoTaKhaoSat" contenteditable="true"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Tuỳ chọn khảo sát</div>
+      <label class="toggle-row">
+        <input type="checkbox" id="cfg-ChoTuDien">
+        <span>Cho phép người không có trong danh sách tự điền tên để khảo sát</span>
+      </label>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;margin-bottom:18px">Mặc định TẮT — chỉ người có mã nhân viên trong danh sách mới khảo sát được. Bật tuỳ chọn này nếu sự kiện có khách mời, đối tác không có trong danh sách nội bộ.</p>
+
+      <div class="field">
+        <label>Lời cảm ơn sau khi hoàn thành khảo sát</label>
+        <div class="rte-toolbar" data-target="cfg-ThankYouText">
+          <button type="button" class="rte-btn" data-cmd="bold"><b>B</b></button>
+          <select class="rte-size">
+            <option value="">Cỡ chữ</option>
+            <option value="2">Nhỏ</option>
+            <option value="3">Vừa</option>
+            <option value="5">Lớn</option>
+            <option value="6">Rất lớn</option>
+          </select>
+        </div>
+        <div class="rte-editable" id="cfg-ThankYouText" contenteditable="true"></div>
+      </div>
+
+      <div class="field-row" style="margin-top:4px">
+        <div class="field"><label>Link ảnh/video sự kiện 1 (tuỳ chọn)</label><input id="cfg-LinkAnhVideo" placeholder="https://..."></div>
+        <div class="field"><label>Tên hiển thị trên nút 1 (tuỳ chọn)</label><input id="cfg-LinkAnhVideoLabel" placeholder="VD: Xem ảnh sự kiện"></div>
+      </div>
+      <div class="field-row" style="margin-top:8px">
+        <div class="field"><label>Link ảnh/video sự kiện 2 (tuỳ chọn)</label><input id="cfg-LinkAnhVideo2" placeholder="https://..."></div>
+        <div class="field"><label>Tên hiển thị trên nút 2 (tuỳ chọn)</label><input id="cfg-LinkAnhVideoLabel2" placeholder="VD: Xem video recap"></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Để trống nếu không cần. Khi điền, trang khảo sát sẽ hiện thêm nút bấm mở link tương ứng (Drive, Google Photos, YouTube...) ngay sau lời cảm ơn — có thể điền cả 2 link để hiện 2 nút.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Màu chủ đạo</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Màu chính</label>
+          <div class="color-row"><input type="color" id="cfg-MauChuDao-picker" onchange="admSyncColor('MauChuDao')"><input id="cfg-MauChuDao"></div>
+        </div>
+        <div class="field">
+          <label>Màu đậm (hover/gradient)</label>
+          <div class="color-row"><input type="color" id="cfg-MauChuDaoDam-picker" onchange="admSyncColor('MauChuDaoDam')"><input id="cfg-MauChuDaoDam"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="save-cfg-btn" onclick="admSaveConfig()">💾 Lưu cấu hình</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">Lưu ý: trang Đăng ký/Khảo sát đọc cấu hình này khi tải trang, nên người dùng cần tải lại trang để thấy thay đổi mới nhất.</p>
+    </div>
+  </div>
+
+  <div id="panel-columns" class="hidden">
+    <div class="card">
+      <div class="card-title">Xem trước dữ liệu thật</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Xem vài dòng đầu của Sheet sự kiện này để biết cột nào đang chứa gì, từ đó khai báo đúng ở khung bên dưới. Cột tiêu đề bên trên là chữ cột thật trên Google Sheets (A, B, C...).</p>
+      <button class="btn btn-outline btn-sm" onclick="admLoadPreview()">🔍 Xem trước Sheet</button>
+      <div id="preview-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      <div id="preview-table-wrap" class="preview-table-wrap hidden"><table class="preview-table" id="preview-table"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Khai báo cấu trúc cột cho sự kiện này</div>
+      <p style="font-size:13px;color:var(--muted)">Mỗi sự kiện có thể dùng Sheet với thứ tự cột khác nhau — không cần sắp lại dữ liệu, chỉ cần khai báo đúng cột nào ứng với trường nào. Nhập tên cột dạng chữ (A, B, C, E, J...) đúng như trên Google Sheets.</p>
+
+      <div class="colmap-section-title">Vị trí trong Sheet</div>
+      <div class="colmap-grid">
+        <div class="colmap-field"><label>Tên tab chứa danh sách</label><input id="cm-TabDanhSach" placeholder="DanhSach"></div>
+        <div class="colmap-field"><label>Dòng dữ liệu bắt đầu từ</label><input id="cm-StartRow" placeholder="14"></div>
+      </div>
+
+      <div class="colmap-section-title">Cột bắt buộc</div>
+      <div class="colmap-grid">
+        <div class="colmap-field"><label>Cột Mã nhân viên (MNV)</label><input id="cm-ColMNV" placeholder="B"></div>
+        <div class="colmap-field"><label>Cột Họ tên</label><input id="cm-ColHoTen" placeholder="C"></div>
+        <div class="colmap-field"><label>Cột Phòng ban</label><input id="cm-ColPhongBan" placeholder="D"></div>
+        <div class="colmap-field"><label>Cột Chức danh</label><input id="cm-ColChucDanh" placeholder="E"></div>
+        <div class="colmap-field"><label>Cột Đăng ký (Có/Không tham dự)</label><input id="cm-ColDangKy" placeholder="F"><div class="colmap-hint">Hệ thống tự ghi vào cột này khi có người đăng ký — nên chọn 1 cột trống.</div></div>
+        <div class="colmap-field"><label>Cột Lý do không tham dự</label><input id="cm-ColLyDo" placeholder="G"><div class="colmap-hint">Cũng nên là cột trống.</div></div>
+      </div>
+
+      <div class="colmap-section-title">Cột tuỳ chọn</div>
+      <div class="colmap-grid">
+        <div class="colmap-field"><label>Cột Size áo (để trống nếu sự kiện này không có)</label><input id="cm-ColSizeAo" placeholder="Để trống = không dùng"></div>
+        <div class="colmap-field"><label>Cột Email (để trống nếu sự kiện này không có)</label><input id="cm-ColEmail" placeholder="Để trống = không dùng"><div class="colmap-hint">Dùng để xuất Excel danh sách "chưa khảo sát" kèm email trên Dashboard.</div></div>
+      </div>
+
+      <button class="btn btn-primary btn-full" style="margin-top:18px" id="save-cm-btn" onclick="admSaveColumnMap()">💾 Lưu cấu trúc cột</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">Sau khi lưu, vào lại tab "Câu hỏi khảo sát" hoặc trang Đăng ký để kiểm tra dữ liệu đã đọc đúng chưa.</p>
+    </div>
+  </div>
+
+  <div id="panel-links" class="hidden">
+    <div class="card">
+      <div class="card-title">Link và QR code cho sự kiện này</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Dùng QR để in lên standee, thư mời, banner — người tham dự quét bằng camera điện thoại, không cần gõ URL dài. Bấm "Copy link" để dán vào email/Zalo dạng văn bản.</p>
+      <div class="link-grid">
+        <div class="link-block">
+          <div class="link-block-title">🔗 Link đăng ký</div>
+          <div class="link-row">
+            <input id="link-register" readonly>
+            <button class="btn btn-outline btn-sm" onclick="admCopyLink('link-register')">Copy</button>
+          </div>
+          <div class="qr-wrap">
+            <div id="qr-register"></div>
+            <div class="qr-caption">QR đăng ký</div>
+            <div class="qr-dl-row">
+              <button class="btn btn-outline btn-sm" onclick="admDownloadQrPng('link-register','qr-dangky')">⬇ PNG</button>
+              <button class="btn btn-outline btn-sm" onclick="admDownloadQrSvg('link-register','qr-dangky')">⬇ SVG</button>
+            </div>
+          </div>
+        </div>
+        <div class="link-block">
+          <div class="link-block-title">🔗 Link khảo sát</div>
+          <div class="link-row">
+            <input id="link-survey" readonly>
+            <button class="btn btn-outline btn-sm" onclick="admCopyLink('link-survey')">Copy</button>
+          </div>
+          <div class="qr-wrap">
+            <div id="qr-survey"></div>
+            <div class="qr-caption">QR khảo sát</div>
+            <div class="qr-dl-row">
+              <button class="btn btn-outline btn-sm" onclick="admDownloadQrPng('link-survey','qr-khaosat')">⬇ PNG</button>
+              <button class="btn btn-outline btn-sm" onclick="admDownloadQrSvg('link-survey','qr-khaosat')">⬇ SVG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p id="link-status" style="font-size:12px;color:var(--muted);margin-top:14px"></p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
   var EVENTS = [];
   var currentEventId = null;
@@ -581,6 +929,507 @@
         alert('❌ Lỗi: ' + err.message);
       });
   }
+
+  /* ===================== ADMIN (namespaced với tiền tố adm) ===================== */
+
+  var admEVENTS = [];
+  var admCurrentEventId = null;
+  var admADMIN_KEY_VALUE = ''; // nhập ở màn hình gate-screen, giữ trong biến JS suốt session tab này
+  var questions = [];
+  var admTYPE_LABEL = { rating5: 'Thang điểm 1–5', nps: 'NPS 0–10', choice: 'Trắc nghiệm (chọn 1)', checkbox: 'Checkbox (chọn nhiều)', dropdown: 'Dropdown', text: 'Câu hỏi mở' };
+  var admNextTempId = 1;
+
+  // admFRONTEND_BASE_URL: domain frontend (GitHub Pages) dùng để build link đăng
+  // ký/khảo sát gửi cho CBNV — KHÔNG còn dùng URL GAS (.../exec) cho việc này
+  // như bản trước, vì trang đăng ký/khảo sát giờ là file tĩnh host riêng, không
+  // còn nằm trên domain script.google.com. Đổi đúng domain GitHub Pages thật
+  // sau khi deploy (xem HUONG_DAN_DEPLOY.md).
+  var admFRONTEND_BASE_URL = 'https://wcm2026.github.io/sukien';
+
+  function admUnlockAdmin() {
+    var key = document.getElementById('gate-key-input').value;
+    if (!key) { document.getElementById('gate-status').innerHTML = '<div class="status-banner status-err">Vui lòng nhập admin key.</div>'; return; }
+    var btn = document.getElementById('gate-btn');
+    btn.innerHTML = 'Đang kiểm tra...'; btn.disabled = true;
+    callApi('adminPing', { adminKey: key }).then(function (res) {
+      btn.innerHTML = 'Vào trang Admin'; btn.disabled = false;
+      if (!res.success) {
+        document.getElementById('gate-status').innerHTML = '<div class="status-banner status-err">❌ Sai admin key.</div>';
+        return;
+      }
+      admADMIN_KEY_VALUE = key;
+      document.getElementById('gate-screen').classList.add('hidden');
+      document.getElementById('admin-root').classList.remove('hidden');
+      admInitAdminPage();
+    }).catch(function (err) {
+      btn.innerHTML = 'Vào trang Admin'; btn.disabled = false;
+      document.getElementById('gate-status').innerHTML = '<div class="status-banner status-err">❌ Lỗi kết nối: ' + err.message + '</div>';
+    });
+  }
+
+  function admInitAdminPage() {
+    callApi('getEventsForClient', {}).then(admOnEventsLoaded).catch(function (err) {
+      admShowStatus('❌ Lỗi tải danh sách sự kiện: ' + err.message, false);
+    });
+    admInitRichTextToolbars();
+  }
+
+  function admInitRichTextToolbars() {
+    document.querySelectorAll('.rte-toolbar').forEach(function (toolbar) {
+      var targetId = toolbar.getAttribute('data-target');
+      var editable = document.getElementById(targetId);
+      toolbar.querySelector('.rte-btn[data-cmd="bold"]').addEventListener('click', function () {
+        editable.focus();
+        document.execCommand('bold');
+      });
+      var sizeSelect = toolbar.querySelector('.rte-size');
+      sizeSelect.addEventListener('change', function () {
+        if (!sizeSelect.value) return;
+        editable.focus();
+        document.execCommand('fontSize', false, sizeSelect.value);
+        sizeSelect.value = '';
+      });
+      // Paste từ Word/Docs mang theo font-family, màu, span style riêng — luôn ép về
+      // plain text khi dán để đồng bộ font hệ thống, người dùng tự bôi đậm/cỡ chữ lại
+      // bằng toolbar nếu cần sau khi dán.
+      editable.addEventListener('paste', function (e) {
+        e.preventDefault();
+        var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertText', false, text);
+      });
+    });
+  }
+
+  function admOnEventsLoaded(res) {
+    if (!res.success || !res.data.length) {
+      admEVENTS = [];
+      document.getElementById('adm-no-event-state').classList.remove('hidden');
+      document.getElementById('adm-event-select').innerHTML = '<option>Chưa có sự kiện</option>';
+      admSwitchTab('newevent');
+      return;
+    }
+    document.getElementById('adm-no-event-state').classList.add('hidden');
+    admEVENTS = res.data;
+    var sel = document.getElementById('adm-event-select');
+    sel.innerHTML = admEVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
+    admCurrentEventId = admEVENTS[0].EventId;
+    document.getElementById('admin-content').classList.remove('hidden');
+    admLoadEventData();
+  }
+
+  function admOnEventChange() {
+    admCurrentEventId = document.getElementById('adm-event-select').value;
+    admLoadEventData();
+    if (!document.getElementById('panel-links').classList.contains('hidden')) admRenderLinks();
+  }
+
+  function admLoadEventData() {
+    var ev = admEVENTS.find(function (e) { return e.EventId === admCurrentEventId; });
+    document.getElementById('event-meta').innerHTML =
+      'Mã sự kiện: <code>' + admCurrentEventId + '</code> · Trang đăng ký: <code>' + (ev.PageDangKy||'—') + '</code> · Trang khảo sát: <code>' + (ev.PageKhaoSat||'—') + '</code>';
+    document.getElementById('survey-preview-link').innerHTML =
+      'Xem trước trang khảo sát: <a href="' + admFRONTEND_BASE_URL + '/survey.html?event=' + encodeURIComponent(admCurrentEventId) + '" target="_blank">mở trang khảo sát</a>';
+
+    callApi('adminGetQuestions', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE })
+      .then(admOnQuestionsLoaded)
+      .catch(function (err) { admShowStatus('❌ Lỗi tải câu hỏi: ' + err.message, false); });
+
+    callApi('getConfigForClient', { eventId: admCurrentEventId }).then(admOnConfigLoaded);
+  }
+
+  /* ---------- CẤU TRÚC DỮ LIỆU (column map) ---------- */
+
+  function admColNumToLetter(n) {
+    n = Number(n) || 0;
+    if (!n) return '';
+    var s = '';
+    while (n > 0) {
+      var rem = (n - 1) % 26;
+      s = String.fromCharCode(65 + rem) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s;
+  }
+
+  function admLoadPreview() {
+    document.getElementById('preview-status').textContent = 'Đang tải...';
+    document.getElementById('preview-table-wrap').classList.add('hidden');
+    callApi('adminPreviewSheetRows', { eventId: admCurrentEventId, numRows: 18, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        if (!res.success) { document.getElementById('preview-status').textContent = '❌ ' + res.error; return; }
+        if (!res.data.length) { document.getElementById('preview-status').textContent = 'Sheet trống.'; return; }
+        document.getElementById('preview-status').textContent = '';
+        var maxCols = Math.max.apply(null, res.data.map(function (r) { return r.length; }));
+        var headHtml = '<tr><th></th>' + Array.from({length:maxCols}, function (_, i) { return '<th>' + admColNumToLetter(i+1) + '</th>'; }).join('') + '</tr>';
+        var bodyHtml = res.data.map(function (row, ri) {
+          return '<tr><td style="font-family:\'IBM Plex Mono\',monospace;color:#9c9a8e">' + (ri+1) + '</td>' +
+            Array.from({length:maxCols}, function (_, i) { return '<td>' + (row[i] !== undefined && row[i] !== '' ? String(row[i]) : '') + '</td>'; }).join('') + '</tr>';
+        }).join('');
+        document.getElementById('preview-table').innerHTML = headHtml + bodyHtml;
+        document.getElementById('preview-table-wrap').classList.remove('hidden');
+      })
+      .catch(function (err) {
+        document.getElementById('preview-status').textContent = '❌ Lỗi kết nối: ' + err.message;
+      });
+  }
+
+  function admLoadColumnMap() {
+    callApi('adminGetColumnMap', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        if (!res.success) { admShowStatus('❌ ' + res.error, false); return; }
+        var c = res.data;
+        document.getElementById('cm-TabDanhSach').value = c.TabDanhSach || '';
+        document.getElementById('cm-StartRow').value = c.StartRow || '';
+        document.getElementById('cm-ColMNV').value = c.ColMNV || '';
+        document.getElementById('cm-ColHoTen').value = c.ColHoTen || '';
+        document.getElementById('cm-ColPhongBan').value = c.ColPhongBan || '';
+        document.getElementById('cm-ColChucDanh').value = c.ColChucDanh || '';
+        document.getElementById('cm-ColDangKy').value = c.ColDangKy || '';
+        document.getElementById('cm-ColLyDo').value = c.ColLyDo || '';
+        document.getElementById('cm-ColSizeAo').value = c.ColSizeAo || '';
+        document.getElementById('cm-ColEmail').value = c.ColEmail || '';
+      })
+      .catch(function (err) {
+        admShowStatus('❌ Lỗi tải cấu trúc cột: ' + err.message, false);
+      });
+  }
+
+  function admSaveColumnMap() {
+    var payload = {
+      TabDanhSach: document.getElementById('cm-TabDanhSach').value.trim(),
+      StartRow: document.getElementById('cm-StartRow').value.trim(),
+      ColMNV: document.getElementById('cm-ColMNV').value.trim(),
+      ColHoTen: document.getElementById('cm-ColHoTen').value.trim(),
+      ColPhongBan: document.getElementById('cm-ColPhongBan').value.trim(),
+      ColChucDanh: document.getElementById('cm-ColChucDanh').value.trim(),
+      ColDangKy: document.getElementById('cm-ColDangKy').value.trim(),
+      ColLyDo: document.getElementById('cm-ColLyDo').value.trim(),
+      ColSizeAo: document.getElementById('cm-ColSizeAo').value.trim(),
+      ColEmail: document.getElementById('cm-ColEmail').value.trim()
+    };
+    var btn = document.getElementById('save-cm-btn');
+    btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
+    callApi('adminSaveColumnMap', { eventId: admCurrentEventId, payload: payload, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = '💾 Lưu cấu trúc cột'; btn.disabled = false;
+        if (res.success) {
+          admShowStatus('✅ Đã lưu cấu trúc cột cho sự kiện này.', true);
+          callApi('getEventsForClient', {}).then(function (r) { if (r.success) admEVENTS = r.data; });
+        } else {
+          admShowStatus('❌ ' + res.error, false);
+        }
+      })
+      .catch(function (err) {
+        btn.innerHTML = '💾 Lưu cấu trúc cột'; btn.disabled = false;
+        admShowStatus('❌ Lỗi kết nối: ' + err.message, false);
+      });
+  }
+
+  /* ---------- LINK & QR ---------- */
+
+  var admQrLinks = {}; // lưu URL gốc theo elId để dùng khi xuất file
+
+  function admBuildLink(page) {
+    // page là 'register' hoặc 'survey' -> trỏ tới đúng file tĩnh tương ứng trên
+    // GitHub Pages, kèm ?event=<id> để trang đó biết tải đúng sự kiện nào.
+    return admFRONTEND_BASE_URL + '/' + (page === 'survey' ? 'survey.html' : 'register.html') +
+      '?event=' + encodeURIComponent(admCurrentEventId);
+  }
+
+  function admRenderLinks() {
+    if (!admFRONTEND_BASE_URL || admFRONTEND_BASE_URL.indexOf('TEN-TO-CHUC') >= 0) {
+      document.getElementById('link-status').textContent = 'Chưa cấu hình admFRONTEND_BASE_URL trong dashboard.html — sửa biến này thành đúng domain GitHub Pages đã deploy trước khi dùng link/QR ở đây.';
+    } else {
+      document.getElementById('link-status').textContent = '';
+    }
+    var regUrl = admBuildLink('register');
+    var surveyUrl = admBuildLink('survey');
+    document.getElementById('link-register').value = regUrl;
+    document.getElementById('link-survey').value = surveyUrl;
+    admDrawQr('qr-register', regUrl);
+    admDrawQr('qr-survey', surveyUrl);
+  }
+
+  // Vẽ QR dạng SVG (vector thật, không phải canvas) — hiển thị sắc nét ở mọi kích thước
+  // và là nguồn dữ liệu chung để xuất cả file SVG và file PNG độ phân giải cao.
+  function admBuildQrSvgString(text, sizePx) {
+    var qr = qrcode(0, 'M'); // typeNumber=0 (tự chọn theo độ dài), errorCorrectionLevel M
+    qr.addData(text);
+    qr.make();
+    var count = qr.getModuleCount();
+    var cell = sizePx / count;
+    var rects = '';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          rects += '<rect x="' + (c * cell).toFixed(2) + '" y="' + (r * cell).toFixed(2) + '" width="' + cell.toFixed(2) + '" height="' + cell.toFixed(2) + '" fill="#1e293b"/>';
+        }
+      }
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + sizePx + ' ' + sizePx + '" width="' + sizePx + '" height="' + sizePx + '">' +
+      '<rect width="' + sizePx + '" height="' + sizePx + '" fill="#ffffff"/>' + rects + '</svg>';
+  }
+
+  function admDrawQr(elId, text) {
+    var el = document.getElementById(elId);
+    admQrLinks[elId] = text;
+    el.innerHTML = admBuildQrSvgString(text, 220);
+  }
+
+  function admCopyLink(inputId) {
+    var input = document.getElementById(inputId);
+    input.select();
+    input.setSelectionRange(0, 99999);
+    try {
+      navigator.clipboard.writeText(input.value);
+    } catch (e) {
+      document.execCommand('copy');
+    }
+    admShowStatus('✅ Đã copy link vào clipboard.', true);
+  }
+
+  function admDownloadQrSvg(inputId, filename) {
+    var text = document.getElementById(inputId).value;
+    if (!text) { admShowStatus('❌ QR chưa sẵn sàng, vui lòng thử lại.', false); return; }
+    var svgString = admBuildQrSvgString(text, 1024); // xuất ở kích thước lớn, vector nên không mất nét dù in to
+    var blob = new Blob([svgString], { type: 'image/svg+xml' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename + '_' + admCurrentEventId + '.svg';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function admDownloadQrPng(inputId, filename) {
+    var text = document.getElementById(inputId).value;
+    if (!text) { admShowStatus('❌ QR chưa sẵn sàng, vui lòng thử lại.', false); return; }
+    var size = 1024; // độ phân giải cao, đủ nét khi in standee/banner
+    var svgString = admBuildQrSvgString(text, size);
+    var svgBlob = new Blob([svgString], { type: 'image/svg+xml' });
+    var url = URL.createObjectURL(svgBlob);
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(function (blob) {
+        var pngUrl = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = pngUrl; a.download = filename + '_' + admCurrentEventId + '.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(pngUrl);
+      }, 'image/png');
+    };
+    img.onerror = function () { admShowStatus('❌ Không tạo được ảnh PNG, vui lòng thử lại.', false); };
+    img.src = url;
+  }
+
+  function admSwitchTab(t) {
+    document.getElementById('tab-newevent').classList.toggle('active', t === 'newevent');
+    document.getElementById('tab-questions').classList.toggle('active', t === 'questions');
+    document.getElementById('tab-config').classList.toggle('active', t === 'config');
+    document.getElementById('tab-columns').classList.toggle('active', t === 'columns');
+    document.getElementById('tab-links').classList.toggle('active', t === 'links');
+    document.getElementById('panel-newevent').classList.toggle('hidden', t !== 'newevent');
+    document.getElementById('admin-content').classList.toggle('hidden', t === 'newevent' || admEVENTS.length === 0);
+    document.getElementById('panel-questions').classList.toggle('hidden', t !== 'questions');
+    document.getElementById('panel-config').classList.toggle('hidden', t !== 'config');
+    document.getElementById('panel-columns').classList.toggle('hidden', t !== 'columns');
+    document.getElementById('panel-links').classList.toggle('hidden', t !== 'links');
+    if (t === 'links') admRenderLinks();
+    if (t === 'columns') admLoadColumnMap();
+  }
+
+  function admSyncNewEventColor(key) {
+    document.getElementById('ne-' + key).value = document.getElementById('ne-' + key + '-picker').value;
+  }
+
+  function admCreateNewEvent() {
+    var tenSuKien = document.getElementById('ne-TenSuKien').value.trim();
+    if (!tenSuKien) { alert('Vui lòng nhập tên sự kiện.'); return; }
+    var payload = {
+      TenSuKien: tenSuKien,
+      EventId: document.getElementById('ne-EventId').value.trim(),
+      TenNgan: document.getElementById('ne-TenNgan').value.trim(),
+      TenChuongTrinh: document.getElementById('ne-TenChuongTrinh').value.trim(),
+      ThoiGian: document.getElementById('ne-ThoiGian').value.trim(),
+      DiaDiem: document.getElementById('ne-DiaDiem').value.trim(),
+      Logo: document.getElementById('ne-Logo').value.trim(),
+      MauChuDao: document.getElementById('ne-MauChuDao').value.trim(),
+      MauChuDaoDam: document.getElementById('ne-MauChuDaoDam').value.trim()
+    };
+    var btn = document.getElementById('create-event-btn');
+    btn.innerHTML = '<span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:var(--primary)"></span> Đang tạo...'; btn.disabled = true;
+    callApi('adminCreateEvent', { payload: payload, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = '✚ Tạo sự kiện'; btn.disabled = false;
+        if (!res.success) { document.getElementById('create-event-status').innerHTML = '<div class="status-banner status-err">❌ ' + res.error + '</div>'; return; }
+        document.getElementById('create-event-status').innerHTML =
+          '<div class="status-banner status-ok">✅ Đã tạo sự kiện "' + tenSuKien + '" (mã: ' + res.eventId + ').<br>' +
+          'Sheet data mới: <a href="' + res.sheetUrl + '" target="_blank">mở Sheet</a> — nhập danh sách tham dự vào tab DanhSach, dòng 14 trở đi.<br>' +
+          'Tiếp theo: trang đăng ký/khảo sát dùng chung register.html/survey.html có sẵn (chỉ cần đúng ?event=' + res.eventId + ' trên URL) — không cần tạo file HTML riêng nữa.</div>';
+        document.getElementById('ne-TenSuKien').value = '';
+        document.getElementById('ne-EventId').value = '';
+        callApi('getEventsForClient', {}).then(function (r) {
+          if (r.success) {
+            admEVENTS = r.data;
+            var sel = document.getElementById('adm-event-select');
+            sel.innerHTML = admEVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
+            sel.value = res.eventId;
+            admCurrentEventId = res.eventId;
+          }
+        });
+      })
+      .catch(function (err) {
+        btn.innerHTML = '✚ Tạo sự kiện'; btn.disabled = false;
+        document.getElementById('create-event-status').innerHTML = '<div class="status-banner status-err">❌ Lỗi kết nối: ' + err.message + '</div>';
+      });
+  }
+
+  function admShowStatus(msg, ok) {
+    document.getElementById('global-status').innerHTML = '<div class="status-banner ' + (ok ? 'status-ok' : 'status-err') + '">' + msg + '</div>';
+    setTimeout(function () { document.getElementById('global-status').innerHTML = ''; }, 3500);
+  }
+
+  /* ---------- CÂU HỎI ---------- */
+
+  function admOnQuestionsLoaded(res) {
+    if (!res.success) { admShowStatus('❌ ' + res.error, false); return; }
+    questions = res.data.map(function (q) { return Object.assign({}, q, { active: q.active !== false }); });
+    admRenderQuestions();
+  }
+
+  function admRenderQuestions() {
+    var list = document.getElementById('questions-list');
+    if (!questions.length) {
+      list.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Chưa có câu hỏi nào cho sự kiện này. Thêm câu hỏi bằng các nút bên dưới.</p>';
+      return;
+    }
+    list.innerHTML = questions.map(function (q, i) {
+      var optionsHtml = '';
+      if (q.type === 'choice' || q.type === 'checkbox' || q.type === 'dropdown') {
+        optionsHtml = '<div style="margin-top:10px">' + q.options.map(function (opt, oi) {
+          return '<div class="opt-row"><input value="' + admEscapeHtml(opt) + '" onchange="admUpdateOption(' + i + ',' + oi + ',this.value)">' +
+            '<button class="icon-btn" onclick="admRemoveOption(' + i + ',' + oi + ')">✕</button></div>';
+        }).join('') + '<button class="btn btn-outline btn-sm" onclick="admAddOption(' + i + ')">+ thêm lựa chọn</button></div>';
+      }
+      return '<div class="q-card">' +
+        '<div class="q-top">' +
+          '<span class="q-type-pill">' + admTYPE_LABEL[q.type] + '</span>' +
+          '<div class="q-actions">' +
+            '<button class="icon-btn" onclick="admMoveQuestion(' + i + ',-1)" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
+            '<button class="icon-btn" onclick="admMoveQuestion(' + i + ',1)" ' + (i === questions.length - 1 ? 'disabled' : '') + '>↓</button>' +
+            '<button class="icon-btn" onclick="admRemoveQuestion(' + i + ')">✕</button>' +
+          '</div>' +
+        '</div>' +
+        '<input value="' + admEscapeHtml(q.text) + '" onchange="admUpdateField(' + i + ',\'text\',this.value)">' +
+        optionsHtml +
+        '<label class="checkbox-row"><input type="checkbox" ' + (q.required ? 'checked' : '') + ' onchange="admUpdateField(' + i + ',\'required\',this.checked)"> Bắt buộc trả lời</label>' +
+      '</div>';
+    }).join('');
+  }
+
+  function admEscapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function admUpdateField(i, field, val) { questions[i][field] = val; }
+  function admUpdateOption(i, oi, val) { questions[i].options[oi] = val; }
+  function admAddOption(i) { questions[i].options.push('Lựa chọn mới'); admRenderQuestions(); }
+  function admRemoveOption(i, oi) { questions[i].options.splice(oi, 1); admRenderQuestions(); }
+
+  function admMoveQuestion(i, dir) {
+    var j = i + dir;
+    if (j < 0 || j >= questions.length) return;
+    var tmp = questions[i]; questions[i] = questions[j]; questions[j] = tmp;
+    admRenderQuestions();
+  }
+
+  function admRemoveQuestion(i) {
+    if (!confirm('Xoá câu hỏi này? Phản hồi cũ vẫn được giữ nhưng câu hỏi sẽ không còn xuất hiện.')) return;
+    questions.splice(i, 1);
+    admRenderQuestions();
+  }
+
+  function admAddQuestion(type) {
+    var needsOptions = (type === 'choice' || type === 'checkbox' || type === 'dropdown');
+    var q = { id: 'qnew' + (admNextTempId++), type: type, text: 'Câu hỏi mới', required: false, active: true, options: needsOptions ? ['Lựa chọn 1', 'Lựa chọn 2'] : [] };
+    questions.push(q);
+    admRenderQuestions();
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  function admSaveQuestions() {
+    var btn = document.getElementById('save-q-btn');
+    btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
+    callApi('adminSaveQuestions', { eventId: admCurrentEventId, list: questions, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = '💾 Lưu thay đổi'; btn.disabled = false;
+        if (res.success) admShowStatus('✅ Đã lưu danh sách câu hỏi.', true);
+        else admShowStatus('❌ ' + res.error, false);
+      })
+      .catch(function (err) {
+        btn.innerHTML = '💾 Lưu thay đổi'; btn.disabled = false;
+        admShowStatus('❌ Lỗi kết nối: ' + err.message, false);
+      });
+  }
+
+  /* ---------- CẤU HÌNH ---------- */
+
+  var admRTE_KEYS = ['MoTaDangKy', 'MoTaKhaoSat', 'ThankYouText'];
+
+  function admOnConfigLoaded(res) {
+    if (!res.success) return;
+    var c = res.data;
+    Object.keys(c).forEach(function (key) {
+      if (key === 'ChoTuDien') return; // checkbox, xử lý riêng
+      var el = document.getElementById('cfg-' + key);
+      if (!el) return;
+      if (admRTE_KEYS.indexOf(key) >= 0) el.innerHTML = c[key] || '';
+      else el.value = c[key];
+    });
+    document.getElementById('cfg-ChoTuDien').checked = !!c.ChoTuDien;
+    admSyncPicker('MauChuDao'); admSyncPicker('MauChuDaoDam');
+  }
+
+  function admSyncPicker(key) {
+    var text = document.getElementById('cfg-' + key);
+    var picker = document.getElementById('cfg-' + key + '-picker');
+    if (text && picker && /^#([0-9a-f]{6})$/i.test(text.value)) picker.value = text.value;
+  }
+
+  function admSyncColor(key) {
+    document.getElementById('cfg-' + key).value = document.getElementById('cfg-' + key + '-picker').value;
+  }
+
+  function admSaveConfig() {
+    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2'];
+    var payload = {};
+    keys.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).value; });
+    admRTE_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).innerHTML; });
+    payload.ChoTuDien = document.getElementById('cfg-ChoTuDien').checked ? 'true' : 'false';
+    var btn = document.getElementById('save-cfg-btn');
+    btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
+    callApi('adminSaveConfig', { eventId: admCurrentEventId, payload: payload, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = '💾 Lưu cấu hình'; btn.disabled = false;
+        if (res.success) admShowStatus('✅ Đã lưu cấu hình. Người dùng cần tải lại trang đăng ký/khảo sát để thấy thay đổi.', true);
+        else admShowStatus('❌ ' + res.error, false);
+      })
+      .catch(function (err) {
+        btn.innerHTML = '💾 Lưu cấu hình'; btn.disabled = false;
+        admShowStatus('❌ Lỗi kết nối: ' + err.message, false);
+      });
+  }
+
+  function goToPage(page) {
+    document.getElementById('view-dashboard').classList.toggle('hidden', page !== 'dashboard');
+    document.getElementById('view-admin').classList.toggle('hidden', page !== 'admin');
+    document.getElementById('page-btn-dashboard').classList.toggle('active', page === 'dashboard');
+    document.getElementById('page-btn-admin').classList.toggle('active', page === 'admin');
+  }
+
 </script>
 </div>
 </body>
