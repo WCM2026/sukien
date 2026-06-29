@@ -5,7 +5,7 @@
 // Nếu deploy lại GAS (tạo deployment mới) và URL đổi, phải sửa lại đúng dòng
 // này ở MỌI file html (register.html, survey.html, dashboard.html, admin.html)
 // — hoặc đơn giản hơn, sửa 1 lần ở đây rồi copy dòng này sang các file khác.
-var API_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzrIduo4TD7D-w9JV39cJXLFNZOjGKI-vC4kijHCCO1BVauO9kLH2yaaiDaqUm4RwBZNw/exec';
 
 // Gọi 1 action lên GAS. Luôn dùng Content-Type 'text/plain;charset=utf-8'
 // (KHÔNG phải 'application/json') — đây là kỹ thuật bắt buộc để trình duyệt
