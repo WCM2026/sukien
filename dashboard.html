@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Dashboard tổng hợp</title>
+<script src="api.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
+  :root {
+    --primary:#2f4b3c; --primary-dark:#1f3527;
+    --success:#0e9f6e; --danger:#f05252; --warning:#e3a008;
+    --bg:#f6f5f1; --card:#ffffff; --border:#e2e8f0;
+    --text:#1e293b; --muted:#64748b; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;overflow-x:hidden}
+  body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);min-height:100vh;padding:20px 16px 48px;color:var(--text)}
+  .page-center{width:100%;max-width:780px;margin:0 auto}
+
+  .header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+  .header h1{font-size:21px;font-weight:800}
+  .header p{color:var(--muted);font-size:13px;margin-top:4px}
+
+  .event-select{padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;background:white;min-width:220px;outline:none}
+  .event-select:focus{border-color:var(--primary)}
+
+  .tabs{display:flex;gap:8px;margin-bottom:14px;background:white;padding:6px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  .tab-btn{flex:1;padding:10px;border:none;border-radius:9px;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s}
+  .tab-btn.active{background:var(--primary);color:white}
+
+  .card{width:100%;background:var(--card);border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,.08);padding:24px;margin-bottom:12px;animation:fadeUp .4s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+  .stat-box{border-radius:12px;padding:14px 10px;text-align:center;background:var(--bg);border:1.5px solid var(--border)}
+  .stat-num{font-size:24px;font-weight:800;line-height:1;margin-bottom:4px;color:var(--primary)}
+  .stat-label{font-size:11px;font-weight:600;color:var(--muted)}
+  .stat-sub{font-size:10px;color:#9c9a8e;margin-top:2px}
+
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .bar-label{font-size:12px;color:var(--muted);width:90px;flex-shrink:0}
+  .bar-track{flex:1;height:11px;background:#f0f0f0;border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px;transition:width .6s ease;background:var(--primary)}
+  .bar-count{font-size:12px;font-weight:700;width:30px;text-align:right}
+
+  .search-wrap{display:flex;gap:8px;margin-bottom:10px}
+  .search-input{flex:1;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;outline:none}
+  .search-input:focus{border-color:var(--primary)}
+  .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .filter-btn{padding:6px 14px;border-radius:100px;border:1.5px solid var(--border);background:white;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--muted)}
+  .filter-btn.active{border-color:var(--primary);background:var(--bg);color:var(--primary)}
+
+  .table-wrap{overflow-x:auto;border-radius:10px;border:1.5px solid var(--border)}
+  .data-table{border-collapse:collapse;width:100%;min-width:480px;font-size:13px}
+  .data-table thead tr{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white}
+  .data-table thead th{padding:10px 12px;font-weight:700;text-align:left;white-space:nowrap;font-size:12px}
+  .data-table tbody tr{border-bottom:1px solid #f0f0f0}
+  .data-table tbody tr:hover{background:var(--bg)}
+  .data-table tbody td{padding:10px 12px;vertical-align:middle}
+  .td-name{font-weight:700}
+  .td-name-nowrap{font-weight:700;white-space:nowrap}
+  .td-sub{font-size:11px;color:var(--muted)}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:700;white-space:nowrap}
+  .badge-yes{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+  .badge-no{background:#fff5f5;color:#c81e1e;border:1px solid #fecaca}
+  .badge-pending{background:#fafafa;color:#64748b;border:1px solid #e2e8f0}
+  .badge-checkin{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+
+  .quote-card{background:var(--bg);border-left:3px solid var(--primary);border-radius:0 10px 10px 0;padding:10px 14px;margin-bottom:8px;font-size:13px}
+  .quote-meta{font-size:11px;color:var(--muted);margin-top:4px}
+
+  .btn-outline{background:white;color:var(--primary);border:1.5px solid var(--primary)}
+  .btn-sm{padding:7px 12px;font-size:12px}
+  .ns-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .ns-count{font-size:12px;color:var(--muted)}
+  .ns-count b{color:var(--danger);font-size:14px}
+  .ns-table-scroll{max-height:760px;overflow-y:auto}
+  .ns-table-scroll thead th{position:sticky;top:0;z-index:1}
+  .th-sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  .th-sortable:hover{background:rgba(255,255,255,.12)}
+  .sort-arrow{font-size:10px;opacity:.55;margin-left:3px}
+  .sort-arrow.active{opacity:1}
+
+  .empty-state{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px}
+  .refresh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+  .last-updated{font-size:12px;color:var(--muted)}
+  .btn{padding:9px 16px;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:var(--primary);color:white}
+  .btn:disabled{opacity:.6}
+
+  .hidden{display:none!important}
+  .spinner-lg{display:inline-block;width:32px;height:32px;border:3px solid #ddd;border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  @media(max-width:520px){
+    .stats-grid{grid-template-columns:1fr 1fr}
+    .card{padding:16px 12px}
+    .header{flex-direction:column;align-items:stretch}
+    .event-select{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="page-center">
+
+<div class="header">
+  <div>
+    <h1>Dashboard tổng hợp</h1>
+    <p>Chọn sự kiện để xem số liệu đăng ký và khảo sát</p>
+  </div>
+  <select class="event-select" id="event-select" onchange="onEventChange()"><option>Đang tải danh sách sự kiện...</option></select>
+</div>
+
+<div id="no-event-state" class="card empty-state">Chưa có sự kiện nào được cấu hình trong tab "Events".</div>
+
+<div id="dashboard-content" class="hidden">
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-register" onclick="switchTab('register')">Đăng ký &amp; Check-in</button>
+    <button class="tab-btn" id="tab-survey" onclick="switchTab('survey')">Khảo sát</button>
+  </div>
+
+  <div id="panel-register">
+    <div class="card">
+      <div class="refresh-row">
+        <div class="card-title" style="margin-bottom:0">Tổng quan</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="last-updated" id="last-updated"></span>
+          <button class="btn" id="refresh-btn" onclick="loadRegisterData()">🔄 Làm mới</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Tổng số</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-yes">—</div><div class="stat-label">Tham dự</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-no">—</div><div class="stat-label">Không tham dự</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-pending">—</div><div class="stat-label">Chưa phản hồi</div></div>
+      </div>
+      <div class="bar-row"><span class="bar-label">Tham dự</span><div class="bar-track"><div class="bar-fill" id="bar-yes" style="width:0%"></div></div><span class="bar-count" id="pct-yes">0%</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Danh sách chi tiết</div>
+      <div class="search-wrap"><input class="search-input" id="search-input" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="applyFilter()"></div>
+      <div class="filter-row">
+        <button class="filter-btn active" id="f-all" onclick="setFilter('all')">Tất cả</button>
+        <button class="filter-btn" id="f-yes" onclick="setFilter('yes')">Tham dự</button>
+        <button class="filter-btn" id="f-no" onclick="setFilter('no')">Không tham dự</button>
+        <button class="filter-btn" id="f-pending" onclick="setFilter('pending')">Chưa phản hồi</button>
+      </div>
+      <div id="register-loading" class="empty-state"><span class="spinner-lg"></span></div>
+      <div class="table-wrap hidden" id="register-table-wrap">
+        <table class="data-table">
+          <thead><tr id="register-table-head"><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Tham dự</th></tr></thead>
+          <tbody id="register-table-body"></tbody>
+        </table>
+      </div>
+      <div class="empty-state hidden" id="register-empty">Không có dữ liệu phù hợp.</div>
+    </div>
+  </div>
+
+  <div id="panel-survey" class="hidden">
+    <div class="card">
+      <div class="refresh-row">
+        <div class="card-title" style="margin-bottom:0">Tổng quan khảo sát</div>
+        <button class="btn" id="survey-refresh-btn" onclick="loadSurveyData()">🔄 Làm mới</button>
+      </div>
+      <div class="stats-grid" id="survey-stats-grid"></div>
+    </div>
+    <div class="card" id="survey-charts"></div>
+
+    <div class="card">
+      <div class="ns-toolbar">
+        <div class="card-title" style="margin-bottom:0">Danh sách tham dự</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="password" id="ns-admin-key" class="search-input" placeholder="Admin key (để xuất Excel)" style="max-width:200px;padding:8px 10px;font-size:12px">
+          <button class="btn btn-outline btn-sm" id="ns-export-btn" onclick="exportNotSurveyed()">📥 Xuất Excel (chưa làm)</button>
+        </div>
+      </div>
+      <div class="ns-count" id="ns-count"></div>
+      <div class="filter-row" style="margin-top:10px">
+        <button class="filter-btn active" id="ns-f-all" onclick="setNsFilter('all')">Tất cả</button>
+        <button class="filter-btn" id="ns-f-done" onclick="setNsFilter('done')">Đã khảo sát</button>
+        <button class="filter-btn" id="ns-f-pending" onclick="setNsFilter('pending')">Chưa khảo sát</button>
+      </div>
+      <div class="search-wrap"><input class="search-input" id="ns-search" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="renderNotSurveyed()"></div>
+      <div id="ns-loading" class="empty-state hidden"><span class="spinner-lg"></span></div>
+      <div class="table-wrap hidden" id="ns-table-wrap">
+        <div class="ns-table-scroll">
+          <table class="data-table">
+            <thead><tr id="ns-table-head">
+              <th class="th-sortable" onclick="sortNsBy('msnv')">Mã NV<span class="sort-arrow" id="ns-arrow-msnv"></span></th>
+              <th class="th-sortable" onclick="sortNsBy('hoTen')">Họ tên<span class="sort-arrow" id="ns-arrow-hoTen"></span></th>
+              <th class="th-sortable" onclick="sortNsBy('phongBan')">Phòng ban<span class="sort-arrow" id="ns-arrow-phongBan"></span></th>
+              <th class="th-sortable" onclick="sortNsBy('daKhaoSat')">Khảo sát<span class="sort-arrow" id="ns-arrow-daKhaoSat"></span></th>
+            </tr></thead>
+            <tbody id="ns-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="empty-state hidden" id="ns-empty">Không có dữ liệu phù hợp.</div>
+    </div>
+
+    <div class="card hidden" id="survey-quotes-card">
+      <div class="card-title">Góp ý mở</div>
+      <div id="survey-quotes"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var EVENTS = [];
+  var currentEventId = null;
+  var allData = [], filtered = [];
+  var currentFilter = 'all';
+  var surveyRaw = null;
+  var coSizeAo = false;
+
+  window.addEventListener('DOMContentLoaded', function () {
+    callApi('getEventsForClient', {})
+      .then(onEventsLoaded)
+      .catch(function (err) {
+        document.getElementById('event-select').innerHTML = '<option>Lỗi tải sự kiện</option>';
+      });
+  });
+
+  function onEventsLoaded(res) {
+    if (!res.success || !res.data.length) {
+      document.getElementById('event-select').innerHTML = '<option>Không có sự kiện</option>';
+      document.getElementById('no-event-state').classList.remove('hidden');
+      return;
+    }
+    EVENTS = res.data;
+    var sel = document.getElementById('event-select');
+    sel.innerHTML = EVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
+    currentEventId = EVENTS[0].EventId;
+    document.getElementById('dashboard-content').classList.remove('hidden');
+    document.getElementById('no-event-state').classList.add('hidden');
+    loadRegisterData();
+  }
+
+  function onEventChange() {
+    currentEventId = document.getElementById('event-select').value;
+    surveyRaw = null;
+    attendeesRaw = [];
+    loadRegisterData();
+    if (!document.getElementById('panel-survey').classList.contains('hidden')) loadSurveyData();
+  }
+
+  function switchTab(t) {
+    document.getElementById('tab-register').classList.toggle('active', t === 'register');
+    document.getElementById('tab-survey').classList.toggle('active', t === 'survey');
+    document.getElementById('panel-register').classList.toggle('hidden', t !== 'register');
+    document.getElementById('panel-survey').classList.toggle('hidden', t !== 'survey');
+    if (t === 'survey' && !surveyRaw) loadSurveyData();
+  }
+
+  function loadRegisterData() {
+    var btn = document.getElementById('refresh-btn');
+    btn.innerHTML = '⏳'; btn.disabled = true;
+    document.getElementById('register-loading').classList.remove('hidden');
+    document.getElementById('register-table-wrap').classList.add('hidden');
+    document.getElementById('register-empty').classList.add('hidden');
+    callApi('getDashboardData', { eventId: currentEventId })
+      .then(onRegisterLoaded)
+      .catch(function (err) {
+        btn.innerHTML = '🔄 Làm mới'; btn.disabled = false;
+        document.getElementById('register-loading').classList.add('hidden');
+        document.getElementById('register-empty').classList.remove('hidden');
+        document.getElementById('register-empty').textContent = '❌ Lỗi: ' + err.message;
+      });
+  }
+
+  function onRegisterLoaded(res) {
+    var btn = document.getElementById('refresh-btn');
+    btn.innerHTML = '🔄 Làm mới'; btn.disabled = false;
+    document.getElementById('register-loading').classList.add('hidden');
+    if (!res.success) {
+      document.getElementById('register-empty').classList.remove('hidden');
+      document.getElementById('register-empty').textContent = '❌ ' + res.error;
+      return;
+    }
+    allData = res.data || [];
+    coSizeAo = !!res.coSizeAo;
+    document.getElementById('register-table-head').innerHTML =
+      '<th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th>' + (coSizeAo ? '<th>Size áo</th>' : '') + '<th>Tham dự</th>';
+    document.getElementById('last-updated').textContent = 'Cập nhật: ' + new Date().toLocaleTimeString('vi-VN');
+
+    var total = allData.length;
+    var yes = allData.filter(function (r) { return r.dangKy === 'Có tham dự'; }).length;
+    var no = allData.filter(function (r) { return r.dangKy === 'Không tham dự'; }).length;
+    var pending = total - yes - no;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-yes').textContent = yes;
+    document.getElementById('stat-no').textContent = no;
+    document.getElementById('stat-pending').textContent = pending;
+    var pctYes = total ? Math.round(yes / total * 100) : 0;
+    document.getElementById('pct-yes').textContent = pctYes + '%';
+    setTimeout(function () {
+      document.getElementById('bar-yes').style.width = pctYes + '%';
+    }, 100);
+
+    applyFilter();
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    ['all','yes','no','pending'].forEach(function (k) { document.getElementById('f-' + k).classList.toggle('active', k === f); });
+    applyFilter();
+  }
+
+  function applyFilter() {
+    var q = (document.getElementById('search-input').value || '').toLowerCase().trim();
+    filtered = allData.filter(function (r) {
+      var match = currentFilter === 'all' ? true :
+        currentFilter === 'yes' ? r.dangKy === 'Có tham dự' :
+        currentFilter === 'no' ? r.dangKy === 'Không tham dự' :
+        r.dangKy !== 'Có tham dự' && r.dangKy !== 'Không tham dự';
+      if (!match) return false;
+      if (!q) return true;
+      return (r.msnv||'').toLowerCase().indexOf(q) >= 0 || (r.hoTen||'').toLowerCase().indexOf(q) >= 0 || (r.phongBan||'').toLowerCase().indexOf(q) >= 0;
+    });
+    renderRegisterTable();
+  }
+
+  function renderRegisterTable() {
+    var tbody = document.getElementById('register-table-body');
+    if (!filtered.length) {
+      tbody.innerHTML = '';
+      document.getElementById('register-table-wrap').classList.add('hidden');
+      document.getElementById('register-empty').classList.remove('hidden');
+      document.getElementById('register-empty').textContent = 'Không có dữ liệu phù hợp.';
+      return;
+    }
+    document.getElementById('register-table-wrap').classList.remove('hidden');
+    document.getElementById('register-empty').classList.add('hidden');
+    tbody.innerHTML = filtered.map(function (r) {
+      var dk = r.dangKy || '';
+      var badge = dk === 'Có tham dự' ? '<span class="badge badge-yes">✅ Tham dự</span>' :
+                  dk === 'Không tham dự' ? '<span class="badge badge-no">❌ Không tham dự</span>' :
+                  '<span class="badge badge-pending">⏳ Chưa phản hồi</span>';
+      var sizeCell = coSizeAo ? '<td><div class="td-sub">'+(r.sizeAo||'—')+'</div></td>' : '';
+      return '<tr><td><div class="td-name" style="font-size:12px">'+r.msnv+'</div></td>'+
+             '<td><div class="td-name">'+r.hoTen+'</div></td>'+
+             '<td><div class="td-sub">'+(r.phongBan||'—')+'</div></td>'+
+             sizeCell +
+             '<td>'+badge+'</td></tr>';
+    }).join('');
+  }
+
+  function loadSurveyData() {
+    var btn = document.getElementById('survey-refresh-btn');
+    btn.innerHTML = '⏳'; btn.disabled = true;
+    callApi('getSurveyDashboardData', { eventId: currentEventId })
+      .then(onSurveyLoaded)
+      .catch(function (err) {
+        btn.innerHTML = '🔄 Làm mới'; btn.disabled = false;
+        document.getElementById('survey-stats-grid').innerHTML = '<div class="empty-state">❌ Lỗi: ' + err.message + '</div>';
+      });
+    loadNotSurveyed();
+  }
+
+  function onSurveyLoaded(res) {
+    var btn = document.getElementById('survey-refresh-btn');
+    btn.innerHTML = '🔄 Làm mới'; btn.disabled = false;
+    if (!res.success) {
+      document.getElementById('survey-stats-grid').innerHTML = '<div class="empty-state">❌ ' + res.error + '</div>';
+      return;
+    }
+    surveyRaw = res;
+    var responses = res.data || [];
+    var questions = res.questions || [];
+
+    var confirmedYes = allData.filter(function (r) { return r.dangKy === 'Có tham dự'; }).length;
+    var surveyed = responses.length;
+    var fromList = responses.filter(function (r) { return r.nguon === 'from_list'; }).length;
+    var rate = confirmedYes ? Math.round(surveyed / confirmedYes * 100) : 0;
+
+    // Tỷ lệ hài lòng: với mỗi người trả lời, lấy TRUNG BÌNH tất cả câu rating5 họ đã chọn;
+    // người đó được tính "hài lòng" nếu trung bình >= 4. Tỷ lệ = số người hài lòng / số người
+    // có ít nhất 1 câu rating5 đã trả lời (người không gặp câu rating nào thì không tính vào mẫu số).
+    var ratingQs = questions.filter(function (q) { return q.type === 'rating5'; });
+    var satisfiedCount = 0, ratedRespondents = 0;
+    responses.forEach(function (r) {
+      var personVals = ratingQs.map(function (q) { return r.answers[q.id]; }).filter(function (v) { return typeof v === 'number'; });
+      if (!personVals.length) return;
+      ratedRespondents++;
+      var personAvg = personVals.reduce(function (a, b) { return a + b; }, 0) / personVals.length;
+      if (personAvg >= 4) satisfiedCount++;
+    });
+    var satisfactionRate = ratedRespondents ? Math.round(satisfiedCount / ratedRespondents * 100) : null;
+
+    var statsHtml = '<div class="stat-box"><div class="stat-num">'+surveyed+'</div><div class="stat-label">Đã khảo sát</div><div class="stat-sub">'+rate+'% trên số đã xác nhận tham dự</div></div>'+
+      '<div class="stat-box"><div class="stat-num">'+fromList+'</div><div class="stat-label">Từ DS có sẵn</div></div>'+
+      '<div class="stat-box"><div class="stat-num">'+(satisfactionRate === null ? '—' : satisfactionRate+'%')+'</div><div class="stat-label">Tỷ lệ hài lòng</div><div class="stat-sub">'+(ratedRespondents ? satisfiedCount+'/'+ratedRespondents+' người đánh giá TB ≥ 4' : 'Chưa có dữ liệu rating')+'</div></div>';
+
+    var ratingQ = ratingQs[0];
+    if (ratingQ) {
+      var vals = responses.map(function (r) { return r.answers[ratingQ.id]; }).filter(function (v) { return typeof v === 'number'; });
+      var avg = vals.length ? (vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1) : '—';
+      statsHtml += '<div class="stat-box"><div class="stat-num">'+avg+'/5</div><div class="stat-label">Điểm hài lòng TB</div></div>';
+    }
+    var npsQ = questions.find(function (q) { return q.type === 'nps'; });
+    if (npsQ) {
+      var nvals = responses.map(function (r) { return r.answers[npsQ.id]; }).filter(function (v) { return typeof v === 'number'; });
+      var nps = '—';
+      if (nvals.length) {
+        var promoters = nvals.filter(function(v){return v>=9;}).length;
+        var detractors = nvals.filter(function(v){return v<=6;}).length;
+        nps = Math.round((promoters - detractors) / nvals.length * 100);
+      }
+      statsHtml += '<div class="stat-box"><div class="stat-num">'+nps+'</div><div class="stat-label">NPS</div></div>';
+    }
+    document.getElementById('survey-stats-grid').innerHTML = statsHtml;
+
+    var chartsHtml = '';
+    questions.forEach(function (q) {
+      if (q.type === 'rating5') {
+        var counts = [1,2,3,4,5].map(function (n) { return responses.filter(function (r) { return r.answers[q.id] === n; }).length; });
+        var max = Math.max(1, Math.max.apply(null, counts));
+        chartsHtml += '<div class="card-title" style="margin-top:18px">'+q.text+'</div>';
+        counts.forEach(function (c, i) {
+          chartsHtml += '<div class="bar-row"><span class="bar-label">'+(i+1)+' sao</span><div class="bar-track"><div class="bar-fill" style="width:'+(c/max*100)+'%"></div></div><span class="bar-count">'+c+'</span></div>';
+        });
+      }
+      if (q.type === 'choice' || q.type === 'dropdown') {
+        var ccounts = q.options.map(function (opt) { return { opt: opt, count: responses.filter(function (r) { return r.answers[q.id] === opt; }).length }; });
+        var cmax = Math.max(1, Math.max.apply(null, ccounts.map(function(c){return c.count;})));
+        chartsHtml += '<div class="card-title" style="margin-top:18px">'+q.text+'</div>';
+        ccounts.forEach(function (c) {
+          chartsHtml += '<div class="bar-row"><span class="bar-label" style="width:140px">'+c.opt+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(c.count/cmax*100)+'%;background:var(--primary-dark)"></div></div><span class="bar-count">'+c.count+'</span></div>';
+        });
+      }
+      if (q.type === 'checkbox') {
+        var kcounts = q.options.map(function (opt) {
+          return { opt: opt, count: responses.filter(function (r) { return Array.isArray(r.answers[q.id]) && r.answers[q.id].indexOf(opt) >= 0; }).length };
+        });
+        var kmax = Math.max(1, Math.max.apply(null, kcounts.map(function(c){return c.count;})));
+        chartsHtml += '<div class="card-title" style="margin-top:18px">'+q.text+' <span style="font-weight:400;text-transform:none">(có thể chọn nhiều)</span></div>';
+        kcounts.forEach(function (c) {
+          chartsHtml += '<div class="bar-row"><span class="bar-label" style="width:140px">'+c.opt+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(c.count/kmax*100)+'%;background:#1d4ed8"></div></div><span class="bar-count">'+c.count+'</span></div>';
+        });
+      }
+    });
+    document.getElementById('survey-charts').innerHTML = chartsHtml || '<div class="empty-state">Chưa có dữ liệu để hiển thị biểu đồ.</div>';
+
+    var textQs = questions.filter(function (q) { return q.type === 'text'; });
+    var quotesCard = document.getElementById('survey-quotes-card');
+    if (textQs.length) {
+      var quotesHtml = textQs.map(function (tq) {
+        var quotes = responses.map(function (r) { return { name: r.hoTen, text: r.answers[tq.id] }; }).filter(function (a) { return a.text && a.text.trim(); });
+        if (!quotes.length) return '';
+        return '<div class="card-title" style="margin-top:14px">' + tq.text + '</div>' + quotes.map(function (a) {
+          return '<div class="quote-card">"' + a.text + '"<div class="quote-meta">— ' + (a.name||'Khách') + '</div></div>';
+        }).join('');
+      }).join('');
+      if (quotesHtml.trim()) {
+        quotesCard.classList.remove('hidden');
+        document.getElementById('survey-quotes').innerHTML = quotesHtml;
+      } else { quotesCard.classList.add('hidden'); }
+    } else { quotesCard.classList.add('hidden'); }
+  }
+
+  // ============================================================================
+  // DANH SÁCH THAM DỰ — toàn bộ người "Có tham dự" trong DanhSach, kèm trạng
+  // thái đã/chưa khảo sát. Nút Xuất Excel vẫn chỉ xuất phần CHƯA khảo sát
+  // (file Excel vẫn có cột Email — chỉ ẩn Email khỏi bảng hiển thị ở đây).
+  // ============================================================================
+  var attendeesRaw = [];
+  var nsFilter = 'all';
+  var nsSortKey = null;
+  var nsSortDir = 1; // 1 = tăng, -1 = giảm
+
+  function loadNotSurveyed() {
+    document.getElementById('ns-loading').classList.remove('hidden');
+    document.getElementById('ns-table-wrap').classList.add('hidden');
+    document.getElementById('ns-empty').classList.add('hidden');
+    callApi('getAttendeesSurveyStatus', { eventId: currentEventId })
+      .then(onNotSurveyedLoaded)
+      .catch(function (err) {
+        document.getElementById('ns-loading').classList.add('hidden');
+        document.getElementById('ns-count').textContent = '❌ Lỗi: ' + err.message;
+      });
+  }
+
+  function onNotSurveyedLoaded(res) {
+    document.getElementById('ns-loading').classList.add('hidden');
+    if (!res.success) {
+      document.getElementById('ns-count').textContent = '❌ ' + res.error;
+      return;
+    }
+    attendeesRaw = res.data || [];
+    document.getElementById('ns-count').innerHTML =
+      '<b>' + res.doneCount + '</b> / ' + res.total + ' người đã xác nhận tham dự đã hoàn thành khảo sát';
+    renderNotSurveyed();
+  }
+
+  function setNsFilter(f) {
+    nsFilter = f;
+    ['all','done','pending'].forEach(function (k) { document.getElementById('ns-f-' + k).classList.toggle('active', k === f); });
+    renderNotSurveyed();
+  }
+
+  function sortNsBy(key) {
+    if (nsSortKey === key) { nsSortDir = -nsSortDir; } else { nsSortKey = key; nsSortDir = 1; }
+    ['msnv','hoTen','phongBan','daKhaoSat'].forEach(function (k) {
+      var el = document.getElementById('ns-arrow-' + k);
+      if (k !== key) { el.textContent = ''; el.classList.remove('active'); }
+    });
+    var arrowEl = document.getElementById('ns-arrow-' + key);
+    arrowEl.textContent = nsSortDir === 1 ? '▲' : '▼';
+    arrowEl.classList.add('active');
+    renderNotSurveyed();
+  }
+
+  function renderNotSurveyed() {
+    var q = (document.getElementById('ns-search').value || '').toLowerCase().trim();
+    var rows = attendeesRaw.filter(function (r) {
+      var matchFilter = nsFilter === 'all' ? true : nsFilter === 'done' ? r.daKhaoSat : !r.daKhaoSat;
+      if (!matchFilter) return false;
+      if (!q) return true;
+      return (r.msnv||'').toLowerCase().indexOf(q) >= 0 || (r.hoTen||'').toLowerCase().indexOf(q) >= 0 ||
+             (r.phongBan||'').toLowerCase().indexOf(q) >= 0 || (r.email||'').toLowerCase().indexOf(q) >= 0;
+    });
+
+    if (nsSortKey) {
+      rows = rows.slice().sort(function (a, b) {
+        var va = a[nsSortKey], vb = b[nsSortKey];
+        if (nsSortKey === 'daKhaoSat') { va = va ? 1 : 0; vb = vb ? 1 : 0; }
+        else { va = String(va||'').toLowerCase(); vb = String(vb||'').toLowerCase(); }
+        if (va < vb) return -1 * nsSortDir;
+        if (va > vb) return 1 * nsSortDir;
+        return 0;
+      });
+    }
+
+    var tbody = document.getElementById('ns-table-body');
+    if (!rows.length) {
+      tbody.innerHTML = '';
+      document.getElementById('ns-table-wrap').classList.add('hidden');
+      document.getElementById('ns-empty').classList.remove('hidden');
+      document.getElementById('ns-empty').textContent = 'Không có dữ liệu phù hợp.';
+      return;
+    }
+    document.getElementById('ns-table-wrap').classList.remove('hidden');
+    document.getElementById('ns-empty').classList.add('hidden');
+    tbody.innerHTML = rows.map(function (r) {
+      var statusBadge = r.daKhaoSat ? '<span class="badge badge-yes">✅ Đã làm</span>' : '<span class="badge badge-pending">⏳ Chưa làm</span>';
+      return '<tr><td><div class="td-name-nowrap" style="font-size:12px">'+r.msnv+'</div></td>'+
+             '<td><div class="td-name-nowrap">'+r.hoTen+'</div></td>'+
+             '<td><div class="td-sub" style="white-space:nowrap">'+(r.phongBan||'—')+'</div></td>'+
+             '<td>'+statusBadge+'</td></tr>';
+    }).join('');
+  }
+
+  function exportNotSurveyed() {
+    var adminKey = document.getElementById('ns-admin-key').value.trim();
+    if (!adminKey) { alert('Vui lòng nhập Admin key để xuất Excel.'); return; }
+    var btn = document.getElementById('ns-export-btn');
+    btn.innerHTML = '⏳ Đang tạo file...'; btn.disabled = true;
+    callApi('exportNotSurveyedExcel', { eventId: currentEventId, adminKey: adminKey })
+      .then(function (res) {
+        btn.innerHTML = '📥 Xuất Excel (chưa làm)'; btn.disabled = false;
+        if (!res.success) { alert('❌ ' + res.error); return; }
+        if (!res.count) { alert('Không có ai trong danh sách "chưa khảo sát" để xuất.'); return; }
+        var byteChars = atob(res.base64);
+        var byteNumbers = new Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        var byteArray = new Uint8Array(byteNumbers);
+        var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = res.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      })
+      .catch(function (err) {
+        btn.innerHTML = '📥 Xuất Excel (chưa làm)'; btn.disabled = false;
+        alert('❌ Lỗi: ' + err.message);
+      });
+  }
+</script>
+</div>
+</body>
+</html>
