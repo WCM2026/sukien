@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Đăng Ký Tham Dự</title>
 <script src="api.js"></script>
 <style>
@@ -235,8 +236,6 @@
   <button class="btn btn-outline btn-full" onclick="resetForm()" style="margin-top:16px">↩ Đăng ký nhân viên khác</button>
 </div>
 
-<div class="footer-links" id="survey-link-wrap"></div>
-
 <script>
   // EVENT_ID/PREFILL_MSNV giờ đọc từ query string của URL (vd register.html?event=yep2026&msnv=NV001),
   // không còn dùng tag server-side <?= ?> của GAS vì trang này không còn được GAS render nữa —
@@ -256,8 +255,6 @@
       return;
     }
     callApi('getConfigForClient', { eventId: EVENT_ID }).then(applyTheme);
-    document.getElementById('survey-link-wrap').innerHTML =
-      'Đã tham dự sự kiện? <a href="survey.html?event=' + encodeURIComponent(EVENT_ID) + '">Làm khảo sát tại đây</a>';
     if (PREFILL_MSNV && PREFILL_MSNV !== '') {
       var input = document.getElementById('msnv-input');
       if (input) { input.value = PREFILL_MSNV; setTimeout(lookupEmployee, 300); }
