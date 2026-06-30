@@ -45,10 +45,11 @@
     width: fit-content; max-width: 100%;
     padding: 16px 26px; border-radius: 20px;
     background: linear-gradient(180deg, #ffffff 0%, #fffaf9 100%);
-    border: 1px solid rgba(226,35,26,.08);
     box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 16px 36px -16px rgba(176,24,16,.22), inset 0 1px 0 rgba(255,255,255,.8);
+    overflow: hidden;
   }
-  .event-brand-logo { max-width: 230px; max-height: 80px; object-fit: contain; }
+  .event-brand-logo { max-width: 230px; max-height: 80px; object-fit: contain; animation: logoBreathe 4.5s ease-in-out infinite; }
+  @keyframes logoBreathe { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
   .event-brand-fallback { font-size: 20px; font-weight: 800; color: var(--primary); letter-spacing: -.2px; }
   .event-brand-program {
     display: inline-block; color: var(--primary-dark); font-size: 12.5px; font-weight: 800;
