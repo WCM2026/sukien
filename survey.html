@@ -124,9 +124,22 @@
   .hidden { display: none !important; }
   .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  #boot-overlay {
+    position:fixed; inset:0; background:var(--bg); z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    transition:opacity .25s ease;
+  }
+  #boot-overlay.boot-hide { opacity:0; pointer-events:none; }
+  .boot-spinner { width:34px; height:34px; border:3px solid rgba(226,35,26,.18); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+  .boot-text { font-size:13px; color:var(--muted); font-weight:600; }
 </style>
 </head>
 <body>
+<div id="boot-overlay">
+  <div class="boot-spinner"></div>
+  <div class="boot-text">Đang tải thông tin sự kiện...</div>
+</div>
 <div class="top-band">
   <img class="top-band-logo" src="https://ops.winmart.vn/assets/img/logo/logo.png" alt="WinCommerce">
 </div>
@@ -220,15 +233,33 @@
 
   window.addEventListener('DOMContentLoaded', function () {
     if (!EVENT_ID) {
+      hideBootOverlay();
       document.querySelector('.page-center').innerHTML =
         '<div class="card"><div class="status-box status-error">Không xác định được sự kiện. ' +
         'Link thiếu hoặc sai tham số <code>event</code>. Vui lòng dùng đúng link BTC cung cấp.</div></div>';
       return;
     }
-    callApi('getConfigForClient', { eventId: EVENT_ID }).then(applyTheme);
+    var cacheKey = 'cfgCache_' + EVENT_ID;
+    try {
+      var cached = localStorage.getItem(cacheKey);
+      if (cached) applyTheme(JSON.parse(cached));
+    } catch (e) {}
+    callApi('getConfigForClient', { eventId: EVENT_ID }).then(function (res) {
+      applyTheme(res);
+      hideBootOverlay();
+      try { if (res && res.success) localStorage.setItem(cacheKey, JSON.stringify(res)); } catch (e) {}
+    }).catch(function () { hideBootOverlay(); });
+    setTimeout(hideBootOverlay, 6000);
     callApi('getSurveyQuestions', { eventId: EVENT_ID }).then(onQuestionsLoaded);
     document.getElementById('msnv-input').focus();
   });
+
+  function hideBootOverlay() {
+    var ov = document.getElementById('boot-overlay');
+    if (!ov) return;
+    ov.classList.add('boot-hide');
+    setTimeout(function () { ov.style.display = 'none'; }, 300);
+  }
 
   function applyTheme(res) {
     if (!res || !res.success) return;
