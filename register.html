@@ -102,6 +102,15 @@
   .size-pill:hover { border-color:var(--primary); }
   .size-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; transform:scale(1.06); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
 
+  .illustration-img { display:block; max-width:100%; max-height:160px; margin:10px 0 14px; border-radius:10px; object-fit:contain; }
+
+  .hat-box { margin-top:20px; animation:fadeUp .3s ease; }
+  .hat-label { font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px; }
+  .hat-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .hat-pill { padding:10px 18px; border-radius:10px; border:1.5px solid var(--border); background:white; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; color:var(--text); transition:transform .12s, border-color .12s, background .12s, box-shadow .12s; }
+  .hat-pill:hover { border-color:var(--primary); }
+  .hat-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; transform:scale(1.04); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
+
   .locked-banner { background:#fff7ed; border:2px solid #fed7aa; border-radius:14px; padding:24px; text-align:center; }
   .locked-icon  { font-size:48px; margin-bottom:12px; }
   .locked-title { font-size:18px; font-weight:800; color:#9a3412; margin-bottom:8px; }
@@ -122,6 +131,18 @@
   .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:white; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
+  /* Overlay che nội dung "mẫu" cho tới khi load xong dữ liệu/cấu hình thật từ server,
+     tránh hiện tượng người dùng thấy theme/logo mặc định trong 3-5s đầu rồi mới
+     "nhảy" sang đúng theme thật khi getConfigForClient trả về. */
+  #boot-overlay {
+    position:fixed; inset:0; background:var(--bg); z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    transition:opacity .25s ease;
+  }
+  #boot-overlay.boot-hide { opacity:0; pointer-events:none; }
+  .boot-spinner { width:34px; height:34px; border:3px solid rgba(226,35,26,.18); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+  .boot-text { font-size:13px; color:var(--muted); font-weight:600; }
+
   .footer-links { text-align:center; padding:14px 0 4px; font-size:12px; color:var(--muted); }
   .footer-links a { color:var(--primary); text-decoration:none; font-weight:600; }
 
@@ -134,6 +155,10 @@
 </style>
 </head>
 <body>
+<div id="boot-overlay">
+  <div class="boot-spinner"></div>
+  <div class="boot-text">Đang tải thông tin sự kiện...</div>
+</div>
 <div class="top-band">
   <img class="top-band-logo" src="https://ops.winmart.vn/assets/img/logo/logo.png" alt="WinCommerce">
 </div>
@@ -212,7 +237,16 @@
       </div>
       <div class="size-box hidden" id="size-section">
         <div class="size-label">👕 Chọn size áo</div>
+        <img class="illustration-img hidden" id="size-illustration" alt="Minh hoạ size áo">
         <div class="size-row" id="size-row"></div>
+      </div>
+      <div class="hat-box hidden" id="hat-section">
+        <div class="hat-label">🧢 Tình trạng mũ</div>
+        <img class="illustration-img hidden" id="hat-illustration" alt="Minh hoạ mũ">
+        <div class="hat-row" id="hat-row">
+          <button type="button" class="hat-pill" onclick="selectHat('Đã có')">✅ Đã có</button>
+          <button type="button" class="hat-pill" onclick="selectHat('Chưa có/Thất lạc')">🔁 Chưa có/Thất lạc</button>
+        </div>
       </div>
       <div class="reason-box hidden" id="reason-section">
         <div class="reason-label">📝 Lý do không tham dự</div>
@@ -233,6 +267,7 @@
 <!-- KẾT QUẢ -->
 <div class="card hidden" id="step-result">
   <div id="result-content"></div>
+  <div id="result-recap"></div>
   <button class="btn btn-outline btn-full" onclick="resetForm()" style="margin-top:16px">↩ Đăng ký nhân viên khác</button>
 </div>
 
@@ -249,17 +284,38 @@
 
   window.addEventListener('DOMContentLoaded', function() {
     if (!EVENT_ID) {
+      hideBootOverlay();
       document.querySelector('.page-center').innerHTML =
         '<div class="card"><div class="status-box status-error">Không xác định được sự kiện. ' +
         'Link thiếu hoặc sai tham số <code>event</code>. Vui lòng dùng đúng link BTC cung cấp.</div></div>';
       return;
     }
-    callApi('getConfigForClient', { eventId: EVENT_ID }).then(applyTheme);
+    // Cache theme/config vào localStorage để các lần tải sau hiện ngay theme đúng
+    // (không phải theme mặc định) trong khi vẫn gọi API ngầm để lấy bản mới nhất.
+    var cacheKey = 'cfgCache_' + EVENT_ID;
+    try {
+      var cached = localStorage.getItem(cacheKey);
+      if (cached) applyTheme(JSON.parse(cached));
+    } catch (e) {}
+    callApi('getConfigForClient', { eventId: EVENT_ID }).then(function (res) {
+      applyTheme(res);
+      hideBootOverlay();
+      try { if (res && res.success) localStorage.setItem(cacheKey, JSON.stringify(res)); } catch (e) {}
+    }).catch(function () { hideBootOverlay(); });
+    // An toàn: nếu API quá chậm hoặc treo, vẫn tự ẩn overlay sau 6s để không chặn người dùng mãi
+    setTimeout(hideBootOverlay, 6000);
     if (PREFILL_MSNV && PREFILL_MSNV !== '') {
       var input = document.getElementById('msnv-input');
       if (input) { input.value = PREFILL_MSNV; setTimeout(lookupEmployee, 300); }
     }
   });
+
+  function hideBootOverlay() {
+    var ov = document.getElementById('boot-overlay');
+    if (!ov) return;
+    ov.classList.add('boot-hide');
+    setTimeout(function () { ov.style.display = 'none'; }, 300);
+  }
 
   function applyTheme(res) {
     if (!res || !res.success) return;
@@ -293,6 +349,10 @@
       else { document.getElementById('banner-place-item').classList.add('hidden'); }
       if (!cfg.ThoiGian || !cfg.DiaDiem) document.getElementById('banner-divider').classList.add('hidden');
     }
+
+    // Ảnh minh hoạ size áo / mũ — chỉ hiện nếu Admin đã điền URL
+    SIZE_ILLUSTRATION_URL = cfg.AnhMinhHoaAo || '';
+    HAT_ILLUSTRATION_URL  = cfg.AnhMinhHoaMu || '';
   }
 
   function lookupEmployee() {
@@ -308,6 +368,9 @@
 
   var SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
   var selectedSize = null;
+  var selectedHat = null;
+  var SIZE_ILLUSTRATION_URL = '';
+  var HAT_ILLUSTRATION_URL  = '';
 
   function onFoundEmployee(result) {
     var btn = document.getElementById('lookup-btn');
@@ -326,11 +389,23 @@
     hideAll(['step-submit','step-result']);
     selectedAttend = null;
     selectedSize = currentEmployee.sizeAo || null;
+    selectedHat = currentEmployee.mu || null;
 
     if (currentEmployee.coSizeAo) {
       document.getElementById('size-row').innerHTML = SIZE_OPTIONS.map(function (s) {
         return '<button type="button" class="size-pill' + (s === selectedSize ? ' selected' : '') + '" onclick="selectSize(\'' + s + '\')">' + s + '</button>';
       }).join('');
+      var sImg = document.getElementById('size-illustration');
+      if (SIZE_ILLUSTRATION_URL) { sImg.src = SIZE_ILLUSTRATION_URL; sImg.classList.remove('hidden'); }
+      else { sImg.classList.add('hidden'); }
+    }
+    if (currentEmployee.coMu) {
+      document.querySelectorAll('#hat-row .hat-pill').forEach(function (p) {
+        p.classList.toggle('selected', p.textContent.indexOf(selectedHat) !== -1 && !!selectedHat);
+      });
+      var hImg = document.getElementById('hat-illustration');
+      if (HAT_ILLUSTRATION_URL) { hImg.src = HAT_ILLUSTRATION_URL; hImg.classList.remove('hidden'); }
+      else { hImg.classList.add('hidden'); }
     }
 
     if (currentEmployee.daXacNhan) {
@@ -339,10 +414,11 @@
       var rows = '<div class="locked-detail-row"><span class="locked-key">Tình trạng</span><span class="locked-val" style="color:'+(isTham?'#0e9f6e':'#f05252')+'">'+dk+'</span></div>';
       if (!isTham) rows += '<div class="locked-detail-row"><span class="locked-key">Lý do</span><span class="locked-val">'+(currentEmployee.lyDo||'—')+'</span></div>';
       if (isTham && currentEmployee.coSizeAo && currentEmployee.sizeAo) rows += '<div class="locked-detail-row"><span class="locked-key">Size áo</span><span class="locked-val">'+currentEmployee.sizeAo+'</span></div>';
+      if (isTham && currentEmployee.coMu && currentEmployee.mu) rows += '<div class="locked-detail-row"><span class="locked-key">Mũ</span><span class="locked-val">'+currentEmployee.mu+'</span></div>';
       document.getElementById('locked-detail').innerHTML = rows;
     } else {
       hide('locked-section'); show('attend-form-wrap'); show('attend-section');
-      hide('reason-section'); hide('size-section');
+      hide('reason-section'); hide('size-section'); hide('hat-section');
       document.getElementById('btn-yes').className = 'choice-btn';
       document.getElementById('btn-no').className  = 'choice-btn';
     }
@@ -354,6 +430,14 @@
     showSubmitPreview();
   }
 
+  function selectHat(h) {
+    selectedHat = h;
+    document.querySelectorAll('#hat-row .hat-pill').forEach(function (p) {
+      p.classList.toggle('selected', p.textContent.indexOf(h) !== -1);
+    });
+    showSubmitPreview();
+  }
+
   function selectAttend(attend) {
     selectedAttend = attend;
     document.getElementById('btn-yes').className = 'choice-btn' + (attend ? ' selected-yes' : '');
@@ -361,8 +445,9 @@
     if (attend) {
       hide('reason-section'); document.getElementById('reason-input').value = '';
       if (currentEmployee.coSizeAo) show('size-section'); else hide('size-section');
+      if (currentEmployee.coMu) show('hat-section'); else hide('hat-section');
     } else {
-      show('reason-section'); hide('size-section');
+      show('reason-section'); hide('size-section'); hide('hat-section');
     }
     showSubmitPreview(); show('step-submit');
   }
@@ -373,6 +458,9 @@
     html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Tham dự</span><strong style="color:'+(selectedAttend?'#0e9f6e':'#f05252')+'">'+(selectedAttend?'✅ Có tham dự':'❌ Không tham dự')+'</strong></div>';
     if (selectedAttend && currentEmployee.coSizeAo && selectedSize) {
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+selectedSize+'</strong></div>';
+    }
+    if (selectedAttend && currentEmployee.coMu && selectedHat) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+selectedHat+'</strong></div>';
     }
     if (!selectedAttend) {
       var ly = document.getElementById('reason-input').value.trim();
@@ -394,15 +482,32 @@
     if (selectedAttend && currentEmployee.coSizeAo && !selectedSize) {
       alert('Vui lòng chọn size áo'); return;
     }
+    if (selectedAttend && currentEmployee.coMu && !selectedHat) {
+      alert('Vui lòng chọn tình trạng mũ'); return;
+    }
     var btn = document.getElementById('submit-btn');
     btn.innerHTML = '<span class="spinner"></span> Đang lưu...'; btn.disabled = true;
     var payload = {
       msnv: currentEmployee.msnv, thamDu: selectedAttend, lyDo: !selectedAttend ? lyDo : '',
-      sizeAo: (selectedAttend && currentEmployee.coSizeAo) ? selectedSize : ''
+      sizeAo: (selectedAttend && currentEmployee.coSizeAo) ? selectedSize : '',
+      mu: (selectedAttend && currentEmployee.coMu) ? selectedHat : ''
     };
     callApi('submitRegistration', { eventId: EVENT_ID, payload: payload })
       .then(onSubmitDone)
       .catch(function(err){ btn.innerHTML='📋 Xác Nhận Đăng Ký'; btn.disabled=false; alert('Lỗi kết nối: '+err.message); });
+  }
+
+  function buildRecapHtml(emp) {
+    var dk = emp.dangKy || '—', isTham = dk === 'Có tham dự';
+    var html = '<div style="background:var(--bg);border-radius:12px;padding:16px;border:1px solid var(--border);margin-top:12px">';
+    html += '<div style="font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Tình trạng đăng ký của bạn</div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Nhân viên</span><strong>'+emp.hoTen+' ('+emp.msnv+')</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Tham dự</span><strong style="color:'+(isTham?'#0e9f6e':'#f05252')+'">'+(isTham?'✅ Có tham dự':'❌ Không tham dự')+'</strong></div>';
+    if (!isTham && emp.lyDo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Lý do</span><strong style="font-style:italic">'+emp.lyDo+'</strong></div>';
+    if (isTham && emp.coSizeAo && emp.sizeAo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+emp.sizeAo+'</strong></div>';
+    if (isTham && emp.coMu && emp.mu) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+emp.mu+'</strong></div>';
+    html += '</div>';
+    return html;
   }
 
   function onSubmitDone(result) {
@@ -417,10 +522,16 @@
     if (!result.success) { document.getElementById('result-content').innerHTML = '<div class="status-box status-error">❌ '+result.error+'</div>'; show('step-result'); return; }
     currentEmployee.daXacNhan = true;
     currentEmployee.dangKy = selectedAttend ? 'Có tham dự' : 'Không tham dự';
-    hideAll(['step-submit']);
+    currentEmployee.sizeAo = selectedAttend && currentEmployee.coSizeAo ? selectedSize : currentEmployee.sizeAo;
+    currentEmployee.mu     = selectedAttend && currentEmployee.coMu ? selectedHat : currentEmployee.mu;
+    currentEmployee.lyDo   = !selectedAttend ? document.getElementById('reason-input').value.trim() : currentEmployee.lyDo;
+    // Theo yêu cầu: sau khi đăng ký xong, ẩn toàn bộ form/thông tin khai báo phía trên,
+    // chỉ còn lại 1 khối kết quả duy nhất (thông báo thành công + recap tình trạng).
+    hideAll(['step-msnv','step-info','step-submit']);
     document.getElementById('result-content').innerHTML =
       '<div class="status-box status-success">✅ Đăng ký thành công! '+
       (selectedAttend ? 'Hẹn gặp bạn tại sự kiện.' : 'Cảm ơn bạn đã phản hồi.') + '</div>';
+    document.getElementById('result-recap').innerHTML = buildRecapHtml(currentEmployee);
     show('step-result');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -449,10 +560,11 @@
   }
 
   function resetForm() {
-    currentEmployee = null; selectedAttend = null;
+    currentEmployee = null; selectedAttend = null; selectedHat = null; selectedSize = null;
     document.getElementById('msnv-input').value = '';
     document.getElementById('lookup-status').innerHTML = '';
     document.getElementById('reason-input').value = '';
+    document.getElementById('result-recap').innerHTML = '';
     hideAll(['step-info','step-submit','step-result']);
     show('step-msnv');
     window.scrollTo({ top: 0, behavior: 'smooth' });
