@@ -589,7 +589,11 @@
       document.getElementById('no-event-state').classList.remove('hidden');
       return;
     }
-    EVENTS = res.data;
+    // Tab Events lưu sự kiện theo thứ tự được tạo (appendRow nối vào cuối), nên
+    // sự kiện MỚI NHẤT luôn là phần tử cuối mảng trả về. Đảo ngược để hiện sự
+    // kiện mới nhất lên đầu dropdown và chọn mặc định — sự kiện cũ vẫn xem được
+    // bằng cách chọn lại trong dropdown.
+    EVENTS = res.data.slice().reverse();
     var sel = document.getElementById('event-select');
     sel.innerHTML = EVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
     currentEventId = EVENTS[0].EventId;
@@ -1023,7 +1027,9 @@
       return;
     }
     document.getElementById('adm-no-event-state').classList.add('hidden');
-    admEVENTS = res.data;
+    // Cùng lý do như Dashboard: tab Events ghi sự kiện mới vào cuối (appendRow),
+    // nên đảo ngược để sự kiện mới nhất hiện đầu dropdown và được chọn mặc định.
+    admEVENTS = res.data.slice().reverse();
     var sel = document.getElementById('adm-event-select');
     sel.innerHTML = admEVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
     admCurrentEventId = admEVENTS[0].EventId;
@@ -1130,7 +1136,7 @@
         btn.innerHTML = '💾 Lưu cấu trúc cột'; btn.disabled = false;
         if (res.success) {
           admShowStatus('✅ Đã lưu cấu trúc cột cho sự kiện này.', true);
-          callApi('getEventsForClient', {}).then(function (r) { if (r.success) admEVENTS = r.data; });
+          callApi('getEventsForClient', {}).then(function (r) { if (r.success) admEVENTS = r.data.slice().reverse(); });
         } else {
           admShowStatus('❌ ' + res.error, false);
         }
@@ -1291,7 +1297,7 @@
         document.getElementById('ne-EventId').value = '';
         callApi('getEventsForClient', {}).then(function (r) {
           if (r.success) {
-            admEVENTS = r.data;
+            admEVENTS = r.data.slice().reverse();
             var sel = document.getElementById('adm-event-select');
             sel.innerHTML = admEVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
             sel.value = res.eventId;
