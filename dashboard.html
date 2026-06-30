@@ -454,6 +454,15 @@
     </div>
 
     <div class="card">
+      <div class="card-title">Đồng phục (size áo / mũ)</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Bật/tắt cột Size áo và Mũ ở tab "Cấu trúc cột dữ liệu". Ảnh minh hoạ dưới đây (nếu có) sẽ hiện ngay phía trên các lựa chọn tương ứng trên trang Đăng ký, giúp nhân viên dễ hình dung trước khi chọn.</p>
+      <div class="field-row">
+        <div class="field"><label>URL ảnh minh hoạ size áo (tuỳ chọn)</label><input id="cfg-AnhMinhHoaAo" placeholder="https://..."></div>
+        <div class="field"><label>URL ảnh minh hoạ mũ (tuỳ chọn)</label><input id="cfg-AnhMinhHoaMu" placeholder="https://..."></div>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Màu chủ đạo</div>
       <div class="field-row">
         <div class="field">
@@ -503,6 +512,7 @@
       <div class="colmap-grid">
         <div class="colmap-field"><label>Cột Size áo (để trống nếu sự kiện này không có)</label><input id="cm-ColSizeAo" placeholder="Để trống = không dùng"></div>
         <div class="colmap-field"><label>Cột Email (để trống nếu sự kiện này không có)</label><input id="cm-ColEmail" placeholder="Để trống = không dùng"><div class="colmap-hint">Dùng để xuất Excel danh sách "chưa khảo sát" kèm email trên Dashboard.</div></div>
+        <div class="colmap-field"><label>Cột Mũ (để trống nếu sự kiện này không có)</label><input id="cm-ColMu" placeholder="Để trống = không dùng"><div class="colmap-hint">Hệ thống ghi "Đã có" hoặc "Chưa có/Thất lạc" vào cột này — nên chọn 1 cột trống. Độc lập hoàn toàn với Size áo.</div></div>
       </div>
 
       <button class="btn btn-primary btn-full" style="margin-top:18px" id="save-cm-btn" onclick="admSaveColumnMap()">💾 Lưu cấu trúc cột</button>
@@ -563,6 +573,7 @@
   var currentFilter = 'all';
   var surveyRaw = null;
   var coSizeAo = false;
+  var coMu = false;
 
   window.addEventListener('DOMContentLoaded', function () {
     callApi('getEventsForClient', {})
@@ -630,8 +641,9 @@
     }
     allData = res.data || [];
     coSizeAo = !!res.coSizeAo;
+    coMu = !!res.coMu;
     document.getElementById('register-table-head').innerHTML =
-      '<th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th>' + (coSizeAo ? '<th>Size áo</th>' : '') + '<th>Tham dự</th>';
+      '<th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th>' + (coSizeAo ? '<th>Size áo</th>' : '') + (coMu ? '<th>Mũ</th>' : '') + '<th>Tham dự</th>';
     document.getElementById('last-updated').textContent = 'Cập nhật: ' + new Date().toLocaleTimeString('vi-VN');
 
     var total = allData.length;
@@ -689,10 +701,12 @@
                   dk === 'Không tham dự' ? '<span class="badge badge-no">❌ Không tham dự</span>' :
                   '<span class="badge badge-pending">⏳ Chưa phản hồi</span>';
       var sizeCell = coSizeAo ? '<td><div class="td-sub">'+(r.sizeAo||'—')+'</div></td>' : '';
+      var hatCell = coMu ? '<td><div class="td-sub">'+(r.mu||'—')+'</div></td>' : '';
       return '<tr><td><div class="td-name" style="font-size:12px">'+r.msnv+'</div></td>'+
              '<td><div class="td-name">'+r.hoTen+'</div></td>'+
              '<td><div class="td-sub">'+(r.phongBan||'—')+'</div></td>'+
              sizeCell +
+             hatCell +
              '<td>'+badge+'</td></tr>';
     }).join('');
   }
@@ -1088,6 +1102,7 @@
         document.getElementById('cm-ColLyDo').value = c.ColLyDo || '';
         document.getElementById('cm-ColSizeAo').value = c.ColSizeAo || '';
         document.getElementById('cm-ColEmail').value = c.ColEmail || '';
+        document.getElementById('cm-ColMu').value = c.ColMu || '';
       })
       .catch(function (err) {
         admShowStatus('❌ Lỗi tải cấu trúc cột: ' + err.message, false);
@@ -1105,7 +1120,8 @@
       ColDangKy: document.getElementById('cm-ColDangKy').value.trim(),
       ColLyDo: document.getElementById('cm-ColLyDo').value.trim(),
       ColSizeAo: document.getElementById('cm-ColSizeAo').value.trim(),
-      ColEmail: document.getElementById('cm-ColEmail').value.trim()
+      ColEmail: document.getElementById('cm-ColEmail').value.trim(),
+      ColMu: document.getElementById('cm-ColMu').value.trim()
     };
     var btn = document.getElementById('save-cm-btn');
     btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
@@ -1404,7 +1420,7 @@
   }
 
   function admSaveConfig() {
-    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2'];
+    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu'];
     var payload = {};
     keys.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).value; });
     admRTE_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).innerHTML; });
