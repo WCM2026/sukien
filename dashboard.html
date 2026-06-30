@@ -558,6 +558,18 @@
       </div>
       <p id="link-status" style="font-size:12px;color:var(--muted);margin-top:14px"></p>
     </div>
+
+    <div class="card">
+      <div class="card-title">Xuất Excel cho Mail Merge / gửi mail hàng loạt</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+        Tải file Excel gồm toàn bộ CBNV của sự kiện này (cột MSNV, Họ tên, Phòng ban, Chức danh, Email,
+        <b>TrangThaiDangKy</b> để tự lọc — "Chưa phản hồi" / "Có tham dự" / "Không tham dự" — và
+        <b>LinkDangKy</b> đã build sẵn link cá nhân hoá kèm mã nhân viên). Dùng file này làm nguồn dữ liệu cho
+        Word Mail Merge hoặc macro VBA Outlook để gửi email mời đăng ký, mỗi người nhận đúng link riêng của mình.
+      </p>
+      <button class="btn btn-primary btn-full" id="mm-export-btn" onclick="admExportMailMergeExcel()">📥 Xuất Excel Mail Merge</button>
+      <p id="mm-status" style="font-size:12px;color:var(--muted);margin-top:10px"></p>
+    </div>
   </div>
 </div>
 
@@ -1208,6 +1220,41 @@
       document.execCommand('copy');
     }
     admShowStatus('✅ Đã copy link vào clipboard.', true);
+  }
+
+  /* ---------- XUẤT EXCEL MAIL MERGE ---------- */
+
+  function admExportMailMergeExcel() {
+    if (!admFRONTEND_BASE_URL || admFRONTEND_BASE_URL.indexOf('TEN-TO-CHUC') >= 0) {
+      document.getElementById('mm-status').innerHTML = '<span style="color:var(--danger)">Chưa cấu hình admFRONTEND_BASE_URL trong dashboard.html — không thể build link đăng ký.</span>';
+      return;
+    }
+    var btn = document.getElementById('mm-export-btn');
+    btn.innerHTML = '⏳ Đang tạo file...'; btn.disabled = true;
+    document.getElementById('mm-status').textContent = '';
+    callApi('exportMailMergeExcel', { eventId: admCurrentEventId, frontendBaseUrl: admFRONTEND_BASE_URL, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = '📥 Xuất Excel Mail Merge'; btn.disabled = false;
+        if (!res.success) { document.getElementById('mm-status').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>'; return; }
+        if (!res.count) { document.getElementById('mm-status').textContent = 'Sự kiện chưa có ai trong danh sách (DanhSach) để xuất.'; return; }
+        var byteChars = atob(res.base64);
+        var byteNumbers = new Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        var byteArray = new Uint8Array(byteNumbers);
+        var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = res.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        var note = res.coEmail ? '' : ' (Lưu ý: sự kiện này chưa khai báo cột Email ở tab "Cấu trúc dữ liệu" — cột Email trong file sẽ trống.)';
+        document.getElementById('mm-status').innerHTML = '✅ Đã tải file (' + res.count + ' người).' + note;
+      })
+      .catch(function (err) {
+        btn.innerHTML = '📥 Xuất Excel Mail Merge'; btn.disabled = false;
+        document.getElementById('mm-status').innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + err.message + '</span>';
+      });
   }
 
   function admDownloadQrSvg(inputId, filename) {
