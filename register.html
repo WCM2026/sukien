@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Đăng Ký Tham Dự</title>
+<script src="api.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
+  :root {
+    /* Giá trị mặc định — sẽ được ghi đè bằng JS ngay khi trang load xong (xem hàm applyTheme) */
+    --primary: #E2231A; --primary-dark: #B01810;
+    --success: #0e9f6e; --danger: #f05252; --warning: #e3a008;
+    --bg: #faf6f5; --card: #ffffff; --border: #e2e8f0;
+    --text: #1e293b; --muted: #64748b; --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); min-height: 100vh; padding: 0 0 48px; color: var(--text); -webkit-text-size-adjust: 100%; }
+  .page-center { width: 100%; max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; align-items: stretch; padding: 0 16px; }
+
+  .top-band {
+    position: relative;
+    width: 100%;
+    background:
+      radial-gradient(ellipse 140% 100% at 15% -20%, rgba(255,255,255,.16) 0%, transparent 55%),
+      linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+    padding: 20px 10px;
+    text-align: center;
+    box-shadow: 0 8px 24px -10px rgba(176,24,16,.5);
+    overflow: hidden;
+  }
+  .top-band::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 1px, transparent 14px);
+    pointer-events: none;
+  }
+  .top-band-logo { position: relative; width: auto; height: 80px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
+
+  .event-brand { width: 100%; text-align: center; padding: 28px 16px 4px; animation: brandIn .55s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes brandIn { from{opacity:0;transform:translateY(10px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .event-brand-logo-wrap {
+    display: flex; justify-content: center; align-items: center; margin: 0 auto 14px; min-height: 1px;
+    position: relative; width: fit-content; max-width: 100%;
+    padding: 18px 28px; border-radius: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #fffaf9 100%);
+    border: 1px solid rgba(226,35,26,.08);
+    box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 16px 36px -16px rgba(176,24,16,.22), inset 0 1px 0 rgba(255,255,255,.8);
+  }
+  .event-brand-logo { width: auto; max-width: 230px; height: auto; max-height: 84px; object-fit: contain; display: block; }
+  .event-brand-fallback { font-size: 22px; font-weight: 800; color: var(--primary); letter-spacing: -.2px; }
+  .event-brand-program {
+    display: inline-block; color: var(--primary-dark); font-size: 12.5px; font-weight: 800;
+    margin-top: 2px; letter-spacing: 1.2px; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 999px; background: rgba(226,35,26,.08);
+  }
+
+  .header { width: 100%; text-align: center; margin: 16px 0 14px; animation: brandIn .55s cubic-bezier(.16,1,.3,1) .08s both; }
+  .header h1 { font-size: 23px; font-weight: 800; line-height: 1.2; letter-spacing: -.3px; }
+  .header h1 span { color: var(--primary); }
+  .header-desc { color: var(--muted); margin-top: 6px; font-size: 13px; line-height: 1.6; }
+  .header-desc * { font-family: inherit !important; }
+  .header-desc b, .header-desc strong { color: var(--text); }
+
+  .event-info-banner { width: 100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: var(--radius); padding: 14px 20px; margin-bottom: 14px; display: flex; justify-content: center; align-items: center; gap: 24px; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 14px 30px -10px rgba(176,24,16,.45); animation: brandIn .5s cubic-bezier(.16,1,.3,1) .14s both; position: relative; overflow: hidden; }
+  .event-info-banner::before { content:''; position:absolute; inset:0; background-image: radial-gradient(circle at 90% 0%, rgba(255,255,255,.18) 0%, transparent 60%); pointer-events:none; }
+  .event-info-banner.hidden { display: none; }
+  .event-info-item { display: flex; align-items: center; gap: 8px; color: white; position: relative; }
+  .event-info-icon { font-size: 20px; flex-shrink: 0; }
+  .event-info-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; opacity: .8; line-height: 1.2; }
+  .event-info-value { font-size: 13px; font-weight: 800; line-height: 1.3; }
+  .event-info-divider { width: 1px; height: 36px; background: rgba(255,255,255,.3); flex-shrink: 0; }
+  @media(max-width:480px){ .event-info-banner{padding:12px 14px;gap:12px} .event-info-icon{font-size:18px} .event-info-label{font-size:10px} .event-info-value{font-size:12px} .event-info-divider{height:30px} }
+  @media(max-width:360px){ .event-info-banner{gap:8px;padding:10px} .event-info-value{font-size:11px} }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .card { width:100%; background:var(--card); border:1px solid rgba(0,0,0,.04); border-radius:var(--radius); box-shadow:0 2px 8px rgba(0,0,0,.04), 0 12px 32px -12px rgba(0,0,0,.10); padding:28px 24px; margin-bottom:12px; animation:fadeUp .4s ease; }
+  .card-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:16px; }
+
+  .input-group { display:flex; gap:10px; }
+  .input-field { flex:1; padding:14px 16px; border:1.5px solid var(--border); border-radius:12px; font-family:inherit; font-size:16px; font-weight:600; color:var(--text); transition:border-color .15s, box-shadow .15s; outline:none; letter-spacing:1px; background:#fff; }
+  .input-field:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(226,35,26,.10); }
+  .input-field::placeholder { font-weight:400; letter-spacing:0; color:#aaa; }
+
+  .btn { padding:14px 24px; border:none; border-radius:12px; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; transition:transform .15s, box-shadow .15s, background .15s; display:inline-flex; align-items:center; gap:8px; text-decoration:none; }
+  .btn:active { transform:scale(.97); }
+  .btn-primary { background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; box-shadow:0 6px 16px -6px rgba(226,35,26,.55); }
+  .btn-primary:hover { box-shadow:0 8px 20px -6px rgba(226,35,26,.65); }
+  .btn-outline { background:white; color:var(--text); border:1.5px solid var(--border); }
+  .btn-outline:hover { border-color:var(--primary); color:var(--primary); }
+  .btn-full { width:100%; justify-content:center; }
+  .btn-lg { padding:16px 24px; font-size:16px; }
+  .btn:disabled { opacity:.6; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:4px; }
+  .info-item { background:var(--bg); border-radius:10px; padding:12px 14px; }
+  .info-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:4px; }
+  .info-value { font-size:15px; font-weight:700; color:var(--text); }
+  .info-item.full { grid-column:1/-1; }
+
+  .divider { border:none; border-top:1px solid var(--border); margin:24px 0; }
+
+  .choice-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .choice-btn { padding:18px 12px; border-radius:14px; border:1.5px solid var(--border); background:white; cursor:pointer; text-align:center; transition:transform .12s, border-color .12s, background .12s, box-shadow .12s; font-family:inherit; }
+  .choice-btn:hover:not(:disabled) { border-color:var(--primary); }
+  .choice-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .choice-btn.selected-yes { border-color:var(--success); background:#f0fdf4; transform:scale(1.02); box-shadow:0 4px 12px -4px rgba(14,159,110,.3); }
+  .choice-btn.selected-no  { border-color:var(--danger);  background:var(--bg); transform:scale(1.02); box-shadow:0 4px 12px -4px rgba(240,82,82,.25); }
+  .choice-icon  { font-size:28px; margin-bottom:6px; }
+  .choice-label { font-size:14px; font-weight:700; color:var(--text); }
+  .choice-sub   { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  .reason-box { margin-top:20px; animation:fadeUp .3s ease; }
+  .reason-label { font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .reason-textarea { width:100%; padding:14px 16px; border:2px solid var(--border); border-radius:12px; font-family:inherit; font-size:14px; color:var(--text); resize:vertical; min-height:90px; outline:none; transition:border-color .2s; line-height:1.5; }
+  .reason-textarea:focus { border-color:var(--danger); }
+  .reason-hint { font-size:12px; color:var(--muted); margin-top:6px; }
+
+  .size-box { margin-top:20px; animation:fadeUp .3s ease; }
+  .size-label { font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px; }
+  .size-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .size-pill { padding:10px 18px; border-radius:10px; border:1.5px solid var(--border); background:white; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; color:var(--text); transition:transform .12s, border-color .12s, background .12s, box-shadow .12s; }
+  .size-pill:hover { border-color:var(--primary); }
+  .size-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; transform:scale(1.06); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
+
+  .illustration-img { display:block; max-width:100%; max-height:160px; margin:10px 0 14px; border-radius:10px; object-fit:contain; }
+
+  .hat-box { margin-top:20px; animation:fadeUp .3s ease; }
+  .hat-label { font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px; }
+  .hat-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .hat-pill { padding:10px 18px; border-radius:10px; border:1.5px solid var(--border); background:white; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; color:var(--text); transition:transform .12s, border-color .12s, background .12s, box-shadow .12s; }
+  .hat-pill:hover { border-color:var(--primary); }
+  .hat-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; transform:scale(1.04); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
+
+  .locked-banner { background:#fff7ed; border:2px solid #fed7aa; border-radius:14px; padding:24px; text-align:center; }
+  .locked-icon  { font-size:48px; margin-bottom:12px; }
+  .locked-title { font-size:18px; font-weight:800; color:#9a3412; margin-bottom:8px; }
+  .locked-sub   { font-size:14px; color:#c2410c; margin-bottom:16px; line-height:1.5; }
+  .locked-detail { background:white; border-radius:10px; padding:14px 16px; text-align:left; font-size:13px; color:var(--text); }
+  .locked-detail-row { display:flex; justify-content:space-between; padding:4px 0; }
+  .locked-detail-row:not(:last-child) { border-bottom:1px solid #f0f0f0; }
+  .locked-key { color:var(--muted); }
+  .locked-val { font-weight:700; }
+
+  .status-box { border-radius:12px; padding:16px 20px; font-size:14px; font-weight:600; text-align:center; }
+  .status-success { background:#f0fdf4; color:#166534; border:1.5px solid #bbf7d0; }
+  .status-error   { background:#fff5f5; color:#c81e1e; border:1.5px solid #fecaca; }
+  .status-info    { background:var(--bg); color:#9b1c1c; border:1.5px solid #fca5a5; }
+  .status-warning { background:#fffbeb; color:#92400e; border:1.5px solid #fde68a; }
+
+  .hidden { display:none!important; }
+  .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:white; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Overlay che nội dung "mẫu" cho tới khi load xong dữ liệu/cấu hình thật từ server,
+     tránh hiện tượng người dùng thấy theme/logo mặc định trong 3-5s đầu rồi mới
+     "nhảy" sang đúng theme thật khi getConfigForClient trả về. */
+  #boot-overlay {
+    position:fixed; inset:0; background:var(--bg); z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    transition:opacity .25s ease;
+  }
+  #boot-overlay.boot-hide { opacity:0; pointer-events:none; }
+  .boot-spinner { width:34px; height:34px; border:3px solid rgba(226,35,26,.18); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+  .boot-text { font-size:13px; color:var(--muted); font-weight:600; }
+
+  .footer-links { text-align:center; padding:14px 0 4px; font-size:12px; color:var(--muted); }
+  .footer-links a { color:var(--primary); text-decoration:none; font-weight:600; }
+
+  @media(max-width:480px){
+    .card{padding:20px 16px}
+    .info-grid{grid-template-columns:1fr}
+    .info-item.full{grid-column:1}
+    .header-logo{max-width:260px;max-height:88px}
+  }
+</style>
+</head>
+<body>
+<div id="boot-overlay">
+  <div class="boot-spinner"></div>
+  <div class="boot-text">Đang tải thông tin sự kiện...</div>
+</div>
+<div class="top-band">
+  <img class="top-band-logo" src="https://ops.winmart.vn/assets/img/logo/logo.png" alt="WinCommerce">
+</div>
+
+<div class="event-brand">
+  <div class="event-brand-logo-wrap" id="logo-wrap"></div>
+  <div class="event-brand-program hidden" id="program-name"></div>
+</div>
+
+<div class="page-center">
+
+<div class="header">
+  <h1>Đăng Ký <span>Tham Dự</span></h1>
+  <div class="header-desc" id="desc-text">Nhập mã nhân viên để bắt đầu đăng ký</div>
+</div>
+
+<div class="event-info-banner hidden" id="event-banner">
+  <div class="event-info-item" id="banner-time-item">
+    <div class="event-info-icon">📅</div>
+    <div><div class="event-info-label">Thời gian</div><div class="event-info-value" id="banner-time">—</div></div>
+  </div>
+  <div class="event-info-divider" id="banner-divider"></div>
+  <div class="event-info-item" id="banner-place-item">
+    <div class="event-info-icon">📍</div>
+    <div><div class="event-info-label">Địa điểm</div><div class="event-info-value" id="banner-place">—</div></div>
+  </div>
+</div>
+
+<!-- BƯỚC 1: NHẬP MSNV -->
+<div class="card" id="step-msnv">
+  <div class="card-title">Bước 1 — Tra cứu nhân viên</div>
+  <div class="input-group">
+    <input type="text" id="msnv-input" class="input-field" placeholder="Nhập mã nhân viên..." maxlength="20"
+      onkeydown="if(event.key==='Enter') lookupEmployee()">
+    <button class="btn btn-primary" onclick="lookupEmployee()" id="lookup-btn">🔍 Tìm</button>
+  </div>
+  <div id="lookup-status" style="margin-top:12px"></div>
+</div>
+
+<!-- BƯỚC 2: THÔNG TIN + XÁC NHẬN -->
+<div class="card hidden" id="step-info">
+  <div class="card-title">Thông tin nhân viên</div>
+  <div class="info-grid">
+    <div class="info-item full"><div class="info-label">Họ &amp; Tên</div><div class="info-value" id="d-hoTen" style="font-size:17px">—</div></div>
+    <div class="info-item"><div class="info-label">Mã NV</div><div class="info-value" id="d-msnv">—</div></div>
+    <div class="info-item"><div class="info-label">Chức Danh</div><div class="info-value" id="d-chucDanh">—</div></div>
+    <div class="info-item full"><div class="info-label">Phòng ban</div><div class="info-value" id="d-phongBan">—</div></div>
+  </div>
+
+  <div id="locked-section" class="hidden" style="margin-top:20px">
+    <div class="locked-banner">
+      <div class="locked-icon">🔒</div>
+      <div class="locked-title">Bạn đã xác nhận rồi!</div>
+      <div class="locked-sub">Mỗi người chỉ được đăng ký <strong>1 lần duy nhất</strong>.<br>Nếu cần thay đổi, hãy gửi yêu cầu cho BTC bên dưới.</div>
+      <div class="locked-detail" id="locked-detail"></div>
+      <button class="btn btn-outline btn-full" style="margin-top:14px" onclick="openChangeRequest()" id="change-request-btn">📨 Báo thay đổi cho BTC</button>
+      <div id="change-request-box" class="hidden" style="margin-top:12px;text-align:left">
+        <textarea class="reason-textarea" id="change-request-text" placeholder="Mô tả thay đổi bạn cần (ví dụ: muốn đổi sang Không tham dự, đổi size áo...)"></textarea>
+        <button class="btn btn-primary btn-full" style="margin-top:10px" onclick="sendChangeRequest()" id="send-change-btn">Gửi yêu cầu</button>
+        <div id="change-request-status" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="attend-section">
+    <div id="attend-form-wrap">
+      <hr class="divider">
+      <div class="card-title">Bước 2 — Xác nhận tham dự</div>
+      <div class="choice-row">
+        <button class="choice-btn" id="btn-yes" onclick="selectAttend(true)">
+          <div class="choice-icon">✅</div><div class="choice-label">Có Tham Dự</div><div class="choice-sub">Tôi sẽ tham gia</div>
+        </button>
+        <button class="choice-btn" id="btn-no" onclick="selectAttend(false)">
+          <div class="choice-icon">❌</div><div class="choice-label">Không Tham Dự</div><div class="choice-sub">Tôi không thể tham gia</div>
+        </button>
+      </div>
+      <div class="size-box hidden" id="size-section">
+        <div class="size-label">👕 Chọn size áo</div>
+        <img class="illustration-img hidden" id="size-illustration" alt="Minh hoạ size áo">
+        <div class="size-row" id="size-row"></div>
+      </div>
+      <div class="hat-box hidden" id="hat-section">
+        <div class="hat-label">🧢 Tình trạng mũ</div>
+        <img class="illustration-img hidden" id="hat-illustration" alt="Minh hoạ mũ">
+        <div class="hat-row" id="hat-row">
+          <button type="button" class="hat-pill" onclick="selectHat('Đã có')">✅ Đã có</button>
+          <button type="button" class="hat-pill" onclick="selectHat('Chưa có/Thất lạc')">🔁 Chưa có/Thất lạc</button>
+        </div>
+      </div>
+      <div class="reason-box hidden" id="reason-section">
+        <div class="reason-label">📝 Lý do không tham dự</div>
+        <textarea class="reason-textarea" id="reason-input" placeholder="Vui lòng cho biết lý do..." oninput="showSubmitPreview()"></textarea>
+        <div class="reason-hint">Thông tin này giúp BTC nắm tình hình tham dự chính xác hơn.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BƯỚC 3: XÁC NHẬN GỬI -->
+<div class="card hidden" id="step-submit">
+  <div class="card-title">Bước 3 — Xác nhận thông tin</div>
+  <div id="submit-preview"></div>
+  <button class="btn btn-primary btn-full btn-lg" style="margin-top:16px" id="submit-btn" onclick="submitRegistration()">📋 Xác Nhận Đăng Ký</button>
+</div>
+
+<!-- KẾT QUẢ -->
+<div class="card hidden" id="step-result">
+  <div id="result-content"></div>
+  <div id="result-recap"></div>
+  <button class="btn btn-outline btn-full" onclick="resetForm()" style="margin-top:16px">↩ Đăng ký nhân viên khác</button>
+</div>
+
+<script>
+  // EVENT_ID/PREFILL_MSNV giờ đọc từ query string của URL (vd register.html?event=yep2026&msnv=NV001),
+  // không còn dùng tag server-side <?= ?> của GAS vì trang này không còn được GAS render nữa —
+  // đây là 1 file HTML tĩnh host trên GitHub Pages.
+  var EVENT_ID      = getQueryParam('event');
+  var PREFILL_MSNV  = getQueryParam('msnv');
+
+  var currentEmployee = null;
+  var selectedAttend  = null;
+  var SESSION_TOKEN   = Math.random().toString(36).substr(2,12) + Date.now().toString(36);
+
+  window.addEventListener('DOMContentLoaded', function() {
+    if (!EVENT_ID) {
+      hideBootOverlay();
+      document.querySelector('.page-center').innerHTML =
+        '<div class="card"><div class="status-box status-error">Không xác định được sự kiện. ' +
+        'Link thiếu hoặc sai tham số <code>event</code>. Vui lòng dùng đúng link BTC cung cấp.</div></div>';
+      return;
+    }
+    // Cache theme/config vào localStorage để các lần tải sau hiện ngay theme đúng
+    // (không phải theme mặc định) trong khi vẫn gọi API ngầm để lấy bản mới nhất.
+    var cacheKey = 'cfgCache_' + EVENT_ID;
+    try {
+      var cached = localStorage.getItem(cacheKey);
+      if (cached) applyTheme(JSON.parse(cached));
+    } catch (e) {}
+    callApi('getConfigForClient', { eventId: EVENT_ID }).then(function (res) {
+      applyTheme(res);
+      hideBootOverlay();
+      try { if (res && res.success) localStorage.setItem(cacheKey, JSON.stringify(res)); } catch (e) {}
+    }).catch(function () { hideBootOverlay(); });
+    // An toàn: nếu API quá chậm hoặc treo, vẫn tự ẩn overlay sau 6s để không chặn người dùng mãi
+    setTimeout(hideBootOverlay, 6000);
+    if (PREFILL_MSNV && PREFILL_MSNV !== '') {
+      var input = document.getElementById('msnv-input');
+      if (input) { input.value = PREFILL_MSNV; setTimeout(lookupEmployee, 300); }
+    }
+  });
+
+  function hideBootOverlay() {
+    var ov = document.getElementById('boot-overlay');
+    if (!ov) return;
+    ov.classList.add('boot-hide');
+    setTimeout(function () { ov.style.display = 'none'; }, 300);
+  }
+
+  function applyTheme(res) {
+    if (!res || !res.success) return;
+    var cfg = res.data;
+    var root = document.documentElement.style;
+    if (cfg.MauChuDao) root.setProperty('--primary', cfg.MauChuDao);
+    if (cfg.MauChuDaoDam) root.setProperty('--primary-dark', cfg.MauChuDaoDam);
+    document.title = cfg.TenSuKien || document.title;
+    // MoTaDangKy có thể chứa định dạng (đậm, xuống dòng, cỡ chữ) do Admin soạn — hiện bằng innerHTML
+    if (cfg.MoTaDangKy) document.getElementById('desc-text').innerHTML = cfg.MoTaDangKy;
+
+    var logoWrap = document.getElementById('logo-wrap');
+    if (cfg.Logo) {
+      logoWrap.innerHTML = '<img class="event-brand-logo" src="' + cfg.Logo + '" alt="' + (cfg.TenSuKien||'') + '">';
+      logoWrap.querySelector('img').onerror = function () {
+        logoWrap.innerHTML = '<div class="event-brand-fallback">' + (cfg.TenNgan || cfg.TenSuKien || '') + '</div>';
+      };
+    } else {
+      logoWrap.innerHTML = '<div class="event-brand-fallback">' + (cfg.TenNgan || cfg.TenSuKien || '') + '</div>';
+    }
+
+    var programEl = document.getElementById('program-name');
+    if (cfg.TenChuongTrinh) { programEl.textContent = cfg.TenChuongTrinh; programEl.classList.remove('hidden'); }
+    else { programEl.classList.add('hidden'); }
+
+    if (cfg.ThoiGian || cfg.DiaDiem) {
+      document.getElementById('event-banner').classList.remove('hidden');
+      if (cfg.ThoiGian) { document.getElementById('banner-time').textContent = cfg.ThoiGian; }
+      else { document.getElementById('banner-time-item').classList.add('hidden'); }
+      if (cfg.DiaDiem) { document.getElementById('banner-place').textContent = cfg.DiaDiem; }
+      else { document.getElementById('banner-place-item').classList.add('hidden'); }
+      if (!cfg.ThoiGian || !cfg.DiaDiem) document.getElementById('banner-divider').classList.add('hidden');
+    }
+
+    // Ảnh minh hoạ size áo / mũ — chỉ hiện nếu Admin đã điền URL
+    SIZE_ILLUSTRATION_URL = cfg.AnhMinhHoaAo || '';
+    HAT_ILLUSTRATION_URL  = cfg.AnhMinhHoaMu || '';
+  }
+
+  function lookupEmployee() {
+    var msnv = document.getElementById('msnv-input').value.trim();
+    if (!msnv) { showStatus('lookup-status','Vui lòng nhập mã nhân viên','warning'); return; }
+    if (/^\d+$/.test(msnv)) { msnv = String(parseInt(msnv,10)); document.getElementById('msnv-input').value = msnv; }
+    var btn = document.getElementById('lookup-btn');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+    callApi('findEmployee', { eventId: EVENT_ID, msnv: msnv, sessionToken: SESSION_TOKEN })
+      .then(onFoundEmployee)
+      .catch(function(err) { showStatus('lookup-status','Lỗi kết nối: '+err.message,'error'); btn.innerHTML='🔍 Tìm'; btn.disabled=false; });
+  }
+
+  var SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
+  var selectedSize = null;
+  var selectedHat = null;
+  var SIZE_ILLUSTRATION_URL = '';
+  var HAT_ILLUSTRATION_URL  = '';
+
+  function onFoundEmployee(result) {
+    var btn = document.getElementById('lookup-btn');
+    btn.innerHTML = '🔍 Tìm'; btn.disabled = false;
+    if (!result.success) {
+      if (result.locked) { showStatus('lookup-status','🔒 '+result.error,'error'); document.getElementById('msnv-input').disabled=true; btn.disabled=true; return; }
+      showStatus('lookup-status','❌ '+result.error,'error'); return;
+    }
+    currentEmployee = result.data;
+    showStatus('lookup-status','✅ Tìm thấy nhân viên!','success');
+    document.getElementById('d-msnv').textContent     = currentEmployee.msnv;
+    document.getElementById('d-hoTen').textContent    = currentEmployee.hoTen;
+    document.getElementById('d-chucDanh').textContent = currentEmployee.chucDanh || '—';
+    document.getElementById('d-phongBan').textContent = currentEmployee.phongBan || '—';
+    show('step-info');
+    hideAll(['step-submit','step-result']);
+    selectedAttend = null;
+    selectedSize = currentEmployee.sizeAo || null;
+    selectedHat = currentEmployee.mu || null;
+
+    if (currentEmployee.coSizeAo) {
+      document.getElementById('size-row').innerHTML = SIZE_OPTIONS.map(function (s) {
+        return '<button type="button" class="size-pill' + (s === selectedSize ? ' selected' : '') + '" onclick="selectSize(\'' + s + '\')">' + s + '</button>';
+      }).join('');
+      var sImg = document.getElementById('size-illustration');
+      if (SIZE_ILLUSTRATION_URL) { sImg.src = SIZE_ILLUSTRATION_URL; sImg.classList.remove('hidden'); }
+      else { sImg.classList.add('hidden'); }
+    }
+    if (currentEmployee.coMu) {
+      document.querySelectorAll('#hat-row .hat-pill').forEach(function (p) {
+        p.classList.toggle('selected', p.textContent.indexOf(selectedHat) !== -1 && !!selectedHat);
+      });
+      var hImg = document.getElementById('hat-illustration');
+      if (HAT_ILLUSTRATION_URL) { hImg.src = HAT_ILLUSTRATION_URL; hImg.classList.remove('hidden'); }
+      else { hImg.classList.add('hidden'); }
+    }
+
+    if (currentEmployee.daXacNhan) {
+      show('locked-section'); hide('attend-section');
+      var dk = currentEmployee.dangKy || '—', isTham = dk === 'Có tham dự';
+      var rows = '<div class="locked-detail-row"><span class="locked-key">Tình trạng</span><span class="locked-val" style="color:'+(isTham?'#0e9f6e':'#f05252')+'">'+dk+'</span></div>';
+      if (!isTham) rows += '<div class="locked-detail-row"><span class="locked-key">Lý do</span><span class="locked-val">'+(currentEmployee.lyDo||'—')+'</span></div>';
+      if (isTham && currentEmployee.coSizeAo && currentEmployee.sizeAo) rows += '<div class="locked-detail-row"><span class="locked-key">Size áo</span><span class="locked-val">'+currentEmployee.sizeAo+'</span></div>';
+      if (isTham && currentEmployee.coMu && currentEmployee.mu) rows += '<div class="locked-detail-row"><span class="locked-key">Mũ</span><span class="locked-val">'+currentEmployee.mu+'</span></div>';
+      document.getElementById('locked-detail').innerHTML = rows;
+    } else {
+      hide('locked-section'); show('attend-form-wrap'); show('attend-section');
+      hide('reason-section'); hide('size-section'); hide('hat-section');
+      document.getElementById('btn-yes').className = 'choice-btn';
+      document.getElementById('btn-no').className  = 'choice-btn';
+    }
+  }
+
+  function selectSize(s) {
+    selectedSize = s;
+    document.querySelectorAll('.size-pill').forEach(function (p) { p.classList.toggle('selected', p.textContent === s); });
+    showSubmitPreview();
+  }
+
+  function selectHat(h) {
+    selectedHat = h;
+    document.querySelectorAll('#hat-row .hat-pill').forEach(function (p) {
+      p.classList.toggle('selected', p.textContent.indexOf(h) !== -1);
+    });
+    showSubmitPreview();
+  }
+
+  function selectAttend(attend) {
+    selectedAttend = attend;
+    document.getElementById('btn-yes').className = 'choice-btn' + (attend ? ' selected-yes' : '');
+    document.getElementById('btn-no').className  = 'choice-btn' + (!attend ? ' selected-no' : '');
+    if (attend) {
+      hide('reason-section'); document.getElementById('reason-input').value = '';
+      if (currentEmployee.coSizeAo) show('size-section'); else hide('size-section');
+      if (currentEmployee.coMu) show('hat-section'); else hide('hat-section');
+    } else {
+      show('reason-section'); hide('size-section'); hide('hat-section');
+    }
+    showSubmitPreview(); show('step-submit');
+  }
+
+  function showSubmitPreview() {
+    var html = '<div style="background:var(--bg);border-radius:12px;padding:16px;border:1px solid var(--border)"><div style="font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Tóm tắt đăng ký</div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Nhân viên</span><strong>'+currentEmployee.hoTen+'</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Tham dự</span><strong style="color:'+(selectedAttend?'#0e9f6e':'#f05252')+'">'+(selectedAttend?'✅ Có tham dự':'❌ Không tham dự')+'</strong></div>';
+    if (selectedAttend && currentEmployee.coSizeAo && selectedSize) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+selectedSize+'</strong></div>';
+    }
+    if (selectedAttend && currentEmployee.coMu && selectedHat) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+selectedHat+'</strong></div>';
+    }
+    if (!selectedAttend) {
+      var ly = document.getElementById('reason-input').value.trim();
+      if (ly) html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0"><span style="color:#64748b;font-size:14px">Lý do: </span><span style="font-style:italic">'+ly+'</span></div>';
+    }
+    html += '</div>';
+    document.getElementById('submit-preview').innerHTML = html;
+  }
+
+  function submitRegistration() {
+    if (selectedAttend === null) { alert('Vui lòng chọn tham dự hay không'); return; }
+    var lyDo = document.getElementById('reason-input').value.trim();
+    if (!selectedAttend && !lyDo) {
+      document.getElementById('reason-input').focus();
+      document.getElementById('reason-input').style.borderColor = '#f05252';
+      setTimeout(function(){ document.getElementById('reason-input').style.borderColor=''; }, 2000);
+      alert('Vui lòng nhập lý do không tham dự'); return;
+    }
+    if (selectedAttend && currentEmployee.coSizeAo && !selectedSize) {
+      alert('Vui lòng chọn size áo'); return;
+    }
+    if (selectedAttend && currentEmployee.coMu && !selectedHat) {
+      alert('Vui lòng chọn tình trạng mũ'); return;
+    }
+    var btn = document.getElementById('submit-btn');
+    btn.innerHTML = '<span class="spinner"></span> Đang lưu...'; btn.disabled = true;
+    var payload = {
+      msnv: currentEmployee.msnv, thamDu: selectedAttend, lyDo: !selectedAttend ? lyDo : '',
+      sizeAo: (selectedAttend && currentEmployee.coSizeAo) ? selectedSize : '',
+      mu: (selectedAttend && currentEmployee.coMu) ? selectedHat : ''
+    };
+    callApi('submitRegistration', { eventId: EVENT_ID, payload: payload })
+      .then(onSubmitDone)
+      .catch(function(err){ btn.innerHTML='📋 Xác Nhận Đăng Ký'; btn.disabled=false; alert('Lỗi kết nối: '+err.message); });
+  }
+
+  function buildRecapHtml(emp) {
+    var dk = emp.dangKy || '—', isTham = dk === 'Có tham dự';
+    var html = '<div style="background:var(--bg);border-radius:12px;padding:16px;border:1px solid var(--border);margin-top:12px">';
+    html += '<div style="font-size:13px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Tình trạng đăng ký của bạn</div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Nhân viên</span><strong>'+emp.hoTen+' ('+emp.msnv+')</strong></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Tham dự</span><strong style="color:'+(isTham?'#0e9f6e':'#f05252')+'">'+(isTham?'✅ Có tham dự':'❌ Không tham dự')+'</strong></div>';
+    if (!isTham && emp.lyDo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Lý do</span><strong style="font-style:italic">'+emp.lyDo+'</strong></div>';
+    if (isTham && emp.coSizeAo && emp.sizeAo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+emp.sizeAo+'</strong></div>';
+    if (isTham && emp.coMu && emp.mu) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+emp.mu+'</strong></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function onSubmitDone(result) {
+    var btn = document.getElementById('submit-btn');
+    btn.innerHTML = '📋 Xác Nhận Đăng Ký'; btn.disabled = false;
+    if (!result.success && result.alreadyRegistered) {
+      hide('step-submit');
+      currentEmployee.daXacNhan = true;
+      if (result.existing) { currentEmployee.dangKy = result.existing.dangKy; currentEmployee.lyDo = result.existing.lyDo; }
+      onFoundEmployee({ success:true, data: currentEmployee }); return;
+    }
+    if (!result.success) { document.getElementById('result-content').innerHTML = '<div class="status-box status-error">❌ '+result.error+'</div>'; show('step-result'); return; }
+    currentEmployee.daXacNhan = true;
+    currentEmployee.dangKy = selectedAttend ? 'Có tham dự' : 'Không tham dự';
+    currentEmployee.sizeAo = selectedAttend && currentEmployee.coSizeAo ? selectedSize : currentEmployee.sizeAo;
+    currentEmployee.mu     = selectedAttend && currentEmployee.coMu ? selectedHat : currentEmployee.mu;
+    currentEmployee.lyDo   = !selectedAttend ? document.getElementById('reason-input').value.trim() : currentEmployee.lyDo;
+    // Theo yêu cầu: sau khi đăng ký xong, ẩn toàn bộ form/thông tin khai báo phía trên,
+    // chỉ còn lại 1 khối kết quả duy nhất (thông báo thành công + recap tình trạng).
+    hideAll(['step-msnv','step-info','step-submit']);
+    document.getElementById('result-content').innerHTML =
+      '<div class="status-box status-success">✅ Đăng ký thành công! '+
+      (selectedAttend ? 'Hẹn gặp bạn tại sự kiện.' : 'Cảm ơn bạn đã phản hồi.') + '</div>';
+    document.getElementById('result-recap').innerHTML = buildRecapHtml(currentEmployee);
+    show('step-result');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openChangeRequest() {
+    document.getElementById('change-request-box').classList.remove('hidden');
+    document.getElementById('change-request-btn').classList.add('hidden');
+  }
+
+  function sendChangeRequest() {
+    var noiDung = document.getElementById('change-request-text').value.trim();
+    if (!noiDung) { alert('Vui lòng mô tả thay đổi bạn cần.'); return; }
+    var btn = document.getElementById('send-change-btn');
+    btn.innerHTML = '<span class="spinner"></span> Đang gửi...'; btn.disabled = true;
+    callApi('submitFeedback', {
+      eventId: EVENT_ID,
+      payload: { loai: 'YeuCauThayDoi-DangKy', msnv: currentEmployee.msnv, hoTen: currentEmployee.hoTen, noiDung: noiDung }
+    }).then(function () {
+      btn.innerHTML = 'Gửi yêu cầu'; btn.disabled = false;
+      document.getElementById('change-request-status').innerHTML = '<div class="status-box status-success">✅ Đã gửi yêu cầu cho BTC.</div>';
+      document.getElementById('change-request-text').value = '';
+    }).catch(function (err) {
+      btn.innerHTML = 'Gửi yêu cầu'; btn.disabled = false;
+      document.getElementById('change-request-status').innerHTML = '<div class="status-box status-error">❌ Lỗi: ' + err.message + '</div>';
+    });
+  }
+
+  function resetForm() {
+    currentEmployee = null; selectedAttend = null; selectedHat = null; selectedSize = null;
+    document.getElementById('msnv-input').value = '';
+    document.getElementById('lookup-status').innerHTML = '';
+    document.getElementById('reason-input').value = '';
+    document.getElementById('result-recap').innerHTML = '';
+    hideAll(['step-info','step-submit','step-result']);
+    show('step-msnv');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function show(id){ document.getElementById(id).classList.remove('hidden'); }
+  function hide(id){ document.getElementById(id).classList.add('hidden'); }
+  function hideAll(ids){ ids.forEach(hide); }
+  function showStatus(id,msg,type){
+    var map = { success:'status-success', error:'status-error', warning:'status-warning', info:'status-info' };
+    document.getElementById(id).innerHTML = '<div class="status-box '+map[type]+'">'+msg+'</div>';
+  }
+</script>
+</div>
+</body>
+</html>
