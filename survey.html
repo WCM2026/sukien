@@ -24,9 +24,9 @@
     background:
       radial-gradient(ellipse 140% 100% at 15% -20%, rgba(255,255,255,.16) 0%, transparent 55%),
       linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
-    padding: 10px 20px;
+    padding: 8px 20px;
     text-align: center;
-    box-shadow: 0 8px 24px -10px rgba(176,24,16,.5);
+    box-shadow: 0 6px 16px -10px rgba(176,24,16,.5);
     overflow: hidden;
   }
   .top-band::before {
@@ -35,20 +35,16 @@
     background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 1px, transparent 14px);
     pointer-events: none;
   }
-  .top-band-logo { position: relative; width: auto; height: 54px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
-  @media(max-width:480px){ .top-band{padding:3px 6px} .top-band-logo{height:25px} }
+  .top-band-logo { position: relative; width: auto; height: 36px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
+  @media(max-width:480px){ .top-band{padding:3px 6px} .top-band-logo{height:24px} }
 
   .event-brand { width: 100%; text-align: center; padding: 28px 16px 4px; animation: brandIn .55s cubic-bezier(.16,1,.3,1) both; }
   @keyframes brandIn { from{opacity:0;transform:translateY(10px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
   .event-brand-logo-wrap {
     display: flex; justify-content: center; align-items: center; margin: 0 auto 14px; min-height: 1px;
     width: fit-content; max-width: 100%;
-    padding: 16px 26px; border-radius: 20px;
-    background: linear-gradient(180deg, #ffffff 0%, #fffaf9 100%);
-    box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 16px 36px -16px rgba(176,24,16,.22), inset 0 1px 0 rgba(255,255,255,.8);
-    overflow: hidden;
   }
-  .event-brand-logo { max-width: 230px; max-height: 80px; object-fit: contain; animation: logoBreathe 4.5s ease-in-out infinite; }
+  .event-brand-logo { max-width: 250px; max-height: 88px; object-fit: contain; animation: logoBreathe 4.5s ease-in-out infinite; }
   @keyframes logoBreathe { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
   .event-brand-fallback { font-size: 20px; font-weight: 800; color: var(--primary); letter-spacing: -.2px; }
   .event-brand-program {
@@ -263,15 +259,9 @@
         'Link thiếu hoặc sai tham số <code>event</code>. Vui lòng dùng đúng link BTC cung cấp.</div></div>';
       return;
     }
-    var cacheKey = 'cfgCache_' + EVENT_ID;
-    try {
-      var cached = localStorage.getItem(cacheKey);
-      if (cached) applyTheme(JSON.parse(cached));
-    } catch (e) {}
     callApi('getConfigForClient', { eventId: EVENT_ID }).then(function (res) {
       applyTheme(res);
       hideBootOverlay();
-      try { if (res && res.success) localStorage.setItem(cacheKey, JSON.stringify(res)); } catch (e) {}
     }).catch(function () { hideBootOverlay(); });
     setTimeout(hideBootOverlay, 6000);
     callApi('getSurveyQuestions', { eventId: EVENT_ID }).then(onQuestionsLoaded);
