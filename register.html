@@ -157,10 +157,12 @@
   #boot-overlay {
     position:fixed; inset:0; background:var(--bg); z-index:9999;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
-    transition:opacity .25s ease;
+    transition:opacity .3s ease;
   }
   #boot-overlay.boot-hide { opacity:0; pointer-events:none; }
-  .boot-spinner { width:34px; height:34px; border:3px solid rgba(226,35,26,.18); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+  .boot-mascot { width:128px; height:128px; object-fit:contain; animation:bootMascotZoom 1.6s ease-in-out infinite; filter:drop-shadow(0 10px 22px rgba(176,24,16,.18)); }
+  @keyframes bootMascotZoom { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+  .boot-spinner { width:26px; height:26px; border:3px solid rgba(226,35,26,.18); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
   .boot-text { font-size:13px; color:var(--muted); font-weight:600; }
 
   .footer-links { text-align:center; padding:14px 0 4px; font-size:12px; color:var(--muted); }
@@ -176,6 +178,7 @@
 </head>
 <body>
 <div id="boot-overlay">
+  <img class="boot-mascot" src="https://s3.hn-2.cloud.cmctelecom.vn/rop/prod/UploadFile/2026/06/30/20260630144839679671baa808.png" alt="Đang tải">
   <div class="boot-spinner"></div>
   <div class="boot-text">Đang tải thông tin sự kiện...</div>
 </div>
