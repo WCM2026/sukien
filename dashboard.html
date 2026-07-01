@@ -246,8 +246,14 @@
         <button class="btn" id="survey-refresh-btn" onclick="loadSurveyData()">🔄 Làm mới</button>
       </div>
       <div class="stats-grid" id="survey-stats-grid"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1.5px solid var(--border)">
+        <input type="password" id="report-admin-key" class="search-input" placeholder="Admin key (để xuất báo cáo)" style="max-width:220px;padding:8px 10px;font-size:12px">
+        <button class="btn btn-outline btn-sm" id="report-export-btn" onclick="exportSurveyReport()">📊 Xuất báo cáo tổng kết Excel</button>
+      </div>
+      <p id="report-status" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
     </div>
     <div class="card" id="survey-charts"></div>
+
 
     <div class="card">
       <div class="ns-toolbar">
@@ -957,6 +963,36 @@
       .catch(function (err) {
         btn.innerHTML = '📥 Xuất Excel (chưa làm)'; btn.disabled = false;
         alert('❌ Lỗi: ' + err.message);
+      });
+  }
+
+  function exportSurveyReport() {
+    var adminKey = document.getElementById('report-admin-key').value.trim();
+    if (!adminKey) { alert('Vui lòng nhập Admin key để xuất báo cáo.'); return; }
+    var btn = document.getElementById('report-export-btn');
+    var statusEl = document.getElementById('report-status');
+    btn.innerHTML = '⏳ Đang tạo file...'; btn.disabled = true;
+    statusEl.textContent = '';
+    callApi('exportSurveyReportExcel', { eventId: currentEventId, adminKey: adminKey })
+      .then(function (res) {
+        btn.innerHTML = '📊 Xuất báo cáo tổng kết Excel'; btn.disabled = false;
+        if (!res.success) { statusEl.textContent = '❌ ' + res.error; return; }
+        var byteChars = atob(res.base64);
+        var byteNumbers = new Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        var byteArray = new Uint8Array(byteNumbers);
+        var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = res.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        statusEl.textContent = '✅ Đã tạo file (' + res.surveyedCount + ' phản hồi khảo sát).';
+      })
+      .catch(function (err) {
+        btn.innerHTML = '📊 Xuất báo cáo tổng kết Excel'; btn.disabled = false;
+        statusEl.textContent = '❌ Lỗi kết nối: ' + err.message;
       });
   }
 
