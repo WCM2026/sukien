@@ -174,21 +174,57 @@
   @media(max-width:520px){
     .field-row{grid-template-columns:1fr}
   }
+
+  /* ---- Màn hình chọn Xem Dashboard / Admin (landing) ---- */
+  .landing-wrap{max-width:460px;margin:64px auto;text-align:center}
+  .landing-wrap h1{font-size:22px;font-weight:800;margin-bottom:6px}
+  .landing-wrap p{color:var(--muted);font-size:13px;margin-bottom:26px}
+  .landing-choices{display:flex;flex-direction:column;gap:14px}
+  .landing-btn{display:flex;align-items:center;gap:14px;text-align:left;padding:18px 20px;border-radius:14px;border:1.5px solid var(--border);background:white;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px rgba(0,0,0,.05);transition:border-color .15s,transform .15s}
+  .landing-btn:hover{border-color:var(--primary);transform:translateY(-1px)}
+  .landing-btn .lb-icon{font-size:26px;flex-shrink:0}
+  .landing-btn .lb-title{font-size:15px;font-weight:800;color:var(--text)}
+  .landing-btn .lb-sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .back-to-landing{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px}
+  .back-to-landing:hover{color:var(--primary)}
+
+  /* ---- Cổng khoá chi tiết khảo sát (inline, trong tab Khảo sát) ---- */
+  .survey-gate{background:var(--bg);border:1.5px dashed var(--border);border-radius:12px;padding:16px;text-align:center}
+  .survey-gate p{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .survey-gate-row{display:flex;gap:8px;max-width:320px;margin:0 auto}
+  .survey-gate-row input{flex:1}
+  .public-note{font-size:11px;color:#9c9a8e;margin-top:6px}
 </style>
 </head>
 <body>
 <div class="page-center">
 
-<div class="page-switch">
+<div id="landing-screen" class="landing-wrap">
+  <h1>Quản lý sự kiện WinCommerce</h1>
+  <p>Chọn chế độ bạn muốn vào</p>
+  <div class="landing-choices">
+    <button class="landing-btn" onclick="enterMode('dashboard')">
+      <span class="lb-icon">📊</span>
+      <span><span class="lb-title">Xem Dashboard</span><br><span class="lb-sub">Xem công khai — không cần admin key</span></span>
+    </button>
+    <button class="landing-btn" onclick="enterMode('admin')">
+      <span class="lb-icon">⚙️</span>
+      <span><span class="lb-title">Admin</span><br><span class="lb-sub">Đăng nhập admin key — toàn quyền quản lý & xem đầy đủ</span></span>
+    </button>
+  </div>
+</div>
+
+<div class="page-switch hidden" id="page-switch-bar">
   <button class="page-switch-btn active" id="page-btn-dashboard" onclick="goToPage('dashboard')">📊 Dashboard</button>
   <button class="page-switch-btn" id="page-btn-admin" onclick="goToPage('admin')">⚙️ Admin</button>
 </div>
 
-<div id="view-dashboard">
+<div id="view-dashboard" class="hidden">
+<button class="back-to-landing" onclick="backToLanding()">← Về màn hình chính</button>
 <div class="header">
   <div>
     <h1>Dashboard tổng hợp</h1>
-    <p>Chọn sự kiện để xem số liệu đăng ký và khảo sát</p>
+    <p id="dash-sub">Chọn sự kiện để xem số liệu đăng ký và khảo sát</p>
   </div>
   <select class="event-select" id="event-select" onchange="onEventChange()"><option>Đang tải danh sách sự kiện...</option></select>
 </div>
@@ -220,7 +256,10 @@
     </div>
 
     <div class="card">
-      <div class="card-title">Danh sách chi tiết</div>
+      <div class="ns-toolbar">
+        <div class="card-title" style="margin-bottom:0">Danh sách chi tiết</div>
+        <button class="btn btn-outline btn-sm" id="pending-export-btn" onclick="exportPendingRegistrations()">📥 Xuất Excel (chưa xác nhận)</button>
+      </div>
       <div class="search-wrap"><input class="search-input" id="search-input" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="applyFilter()"></div>
       <div class="filter-row">
         <button class="filter-btn active" id="f-all" onclick="setFilter('all')">Tất cả</button>
@@ -230,10 +269,12 @@
       </div>
       <div id="register-loading" class="empty-state"><span class="spinner-lg"></span></div>
       <div class="table-wrap hidden" id="register-table-wrap">
-        <table class="data-table">
-          <thead><tr id="register-table-head"><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Tham dự</th></tr></thead>
-          <tbody id="register-table-body"></tbody>
-        </table>
+        <div class="ns-table-scroll">
+          <table class="data-table">
+            <thead><tr id="register-table-head"><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Tham dự</th></tr></thead>
+            <tbody id="register-table-body"></tbody>
+          </table>
+        </div>
       </div>
       <div class="empty-state hidden" id="register-empty">Không có dữ liệu phù hợp.</div>
     </div>
@@ -245,51 +286,71 @@
         <div class="card-title" style="margin-bottom:0">Tổng quan khảo sát</div>
         <button class="btn" id="survey-refresh-btn" onclick="loadSurveyData()">🔄 Làm mới</button>
       </div>
-      <div class="stats-grid" id="survey-stats-grid"></div>
+      <div class="stats-grid" id="survey-counts-grid">
+        <div class="stat-box"><div class="stat-num" id="sc-total">—</div><div class="stat-label">Tham dự</div></div>
+        <div class="stat-box"><div class="stat-num" id="sc-done">—</div><div class="stat-label">Đã khảo sát</div></div>
+        <div class="stat-box"><div class="stat-num" id="sc-pending">—</div><div class="stat-label">Chưa khảo sát</div></div>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1.5px solid var(--border)">
-        <input type="password" id="report-admin-key" class="search-input" placeholder="Admin key (để xuất báo cáo)" style="max-width:220px;padding:8px 10px;font-size:12px">
-        <button class="btn btn-outline btn-sm" id="report-export-btn" onclick="exportSurveyReport()">📊 Xuất báo cáo tổng kết Excel</button>
+        <button class="btn btn-outline btn-sm" id="ns-export-btn" onclick="exportNotSurveyed()">📥 Xuất Excel (chưa khảo sát)</button>
+        <span class="public-note">Công khai — không cần admin key</span>
       </div>
-      <p id="report-status" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
-    </div>
-    <div class="card" id="survey-charts"></div>
-
-
-    <div class="card">
-      <div class="ns-toolbar">
-        <div class="card-title" style="margin-bottom:0">Danh sách tham dự</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="password" id="ns-admin-key" class="search-input" placeholder="Admin key (để xuất Excel)" style="max-width:200px;padding:8px 10px;font-size:12px">
-          <button class="btn btn-outline btn-sm" id="ns-export-btn" onclick="exportNotSurveyed()">📥 Xuất Excel (chưa làm)</button>
-        </div>
-      </div>
-      <div class="ns-count" id="ns-count"></div>
-      <div class="filter-row" style="margin-top:10px">
-        <button class="filter-btn active" id="ns-f-all" onclick="setNsFilter('all')">Tất cả</button>
-        <button class="filter-btn" id="ns-f-done" onclick="setNsFilter('done')">Đã khảo sát</button>
-        <button class="filter-btn" id="ns-f-pending" onclick="setNsFilter('pending')">Chưa khảo sát</button>
-      </div>
-      <div class="search-wrap"><input class="search-input" id="ns-search" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="renderNotSurveyed()"></div>
-      <div id="ns-loading" class="empty-state hidden"><span class="spinner-lg"></span></div>
-      <div class="table-wrap hidden" id="ns-table-wrap">
-        <div class="ns-table-scroll">
-          <table class="data-table">
-            <thead><tr id="ns-table-head">
-              <th class="th-sortable" onclick="sortNsBy('msnv')">Mã NV<span class="sort-arrow" id="ns-arrow-msnv"></span></th>
-              <th class="th-sortable" onclick="sortNsBy('hoTen')">Họ tên<span class="sort-arrow" id="ns-arrow-hoTen"></span></th>
-              <th class="th-sortable" onclick="sortNsBy('phongBan')">Phòng ban<span class="sort-arrow" id="ns-arrow-phongBan"></span></th>
-              <th class="th-sortable" onclick="sortNsBy('daKhaoSat')">Khảo sát<span class="sort-arrow" id="ns-arrow-daKhaoSat"></span></th>
-            </tr></thead>
-            <tbody id="ns-table-body"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="empty-state hidden" id="ns-empty">Không có dữ liệu phù hợp.</div>
     </div>
 
-    <div class="card hidden" id="survey-quotes-card">
-      <div class="card-title">Góp ý mở</div>
-      <div id="survey-quotes"></div>
+    <div class="card" id="survey-gate-card">
+      <div class="survey-gate">
+        <p>🔒 Biểu đồ, danh sách chi tiết và báo cáo tổng kết khảo sát chỉ hiện sau khi nhập đúng Admin key.</p>
+        <div class="survey-gate-row">
+          <input type="password" id="survey-gate-key" class="search-input" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') unlockSurveyDetail()">
+          <button class="btn btn-sm" id="survey-gate-btn" onclick="unlockSurveyDetail()">Mở khoá</button>
+        </div>
+        <div id="survey-gate-status" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div id="survey-detail" class="hidden">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:0">Chi tiết khảo sát</div>
+        <div class="stats-grid" id="survey-stats-grid" style="margin-top:16px"></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1.5px solid var(--border)">
+          <button class="btn btn-outline btn-sm" id="report-export-btn" onclick="exportSurveyReport()">📊 Xuất báo cáo tổng kết Excel</button>
+        </div>
+        <p id="report-status" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
+      </div>
+      <div class="card" id="survey-charts"></div>
+
+      <div class="card">
+        <div class="ns-toolbar">
+          <div class="card-title" style="margin-bottom:0">Danh sách tham dự</div>
+        </div>
+        <div class="ns-count" id="ns-count"></div>
+        <div class="filter-row" style="margin-top:10px">
+          <button class="filter-btn active" id="ns-f-all" onclick="setNsFilter('all')">Tất cả</button>
+          <button class="filter-btn" id="ns-f-done" onclick="setNsFilter('done')">Đã khảo sát</button>
+          <button class="filter-btn" id="ns-f-pending" onclick="setNsFilter('pending')">Chưa khảo sát</button>
+        </div>
+        <div class="search-wrap"><input class="search-input" id="ns-search" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="renderNotSurveyed()"></div>
+        <div id="ns-loading" class="empty-state hidden"><span class="spinner-lg"></span></div>
+        <div class="table-wrap hidden" id="ns-table-wrap">
+          <div class="ns-table-scroll">
+            <table class="data-table">
+              <thead><tr id="ns-table-head">
+                <th class="th-sortable" onclick="sortNsBy('msnv')">Mã NV<span class="sort-arrow" id="ns-arrow-msnv"></span></th>
+                <th class="th-sortable" onclick="sortNsBy('hoTen')">Họ tên<span class="sort-arrow" id="ns-arrow-hoTen"></span></th>
+                <th class="th-sortable" onclick="sortNsBy('phongBan')">Phòng ban<span class="sort-arrow" id="ns-arrow-phongBan"></span></th>
+                <th class="th-sortable" onclick="sortNsBy('daKhaoSat')">Khảo sát<span class="sort-arrow" id="ns-arrow-daKhaoSat"></span></th>
+              </tr></thead>
+              <tbody id="ns-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state hidden" id="ns-empty">Không có dữ liệu phù hợp.</div>
+      </div>
+
+      <div class="card hidden" id="survey-quotes-card">
+        <div class="card-title">Góp ý mở</div>
+        <div id="survey-quotes"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -303,6 +364,7 @@
      sánh ADMIN_KEY) — màn hình này chỉ tránh hiện nhầm UI Admin cho người
      chưa có key, không tự nó là lớp bảo mật. -->
 <div id="gate-screen" class="card" style="max-width:420px;margin:60px auto">
+  <button class="back-to-landing" onclick="backToLanding()">← Về màn hình chính</button>
   <div class="card-title">Đăng nhập Admin</div>
   <div class="field"><label>Admin key</label><input type="password" id="gate-key-input" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') admUnlockAdmin()"></div>
   <button class="btn btn-primary btn-full" onclick="admUnlockAdmin()" id="gate-btn">Vào trang Admin</button>
@@ -383,6 +445,15 @@
   </div>
 
   <div id="panel-config" class="hidden">
+    <div class="card">
+      <div class="card-title">Hiển thị trên Dashboard công khai</div>
+      <label class="toggle-row">
+        <input type="checkbox" id="cfg-CongKhaiDashboard">
+        <span>Cho phép xem sự kiện này trên Dashboard công khai (không cần admin key)</span>
+      </label>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;margin-bottom:14px">Nếu KHÔNG có sự kiện nào được bật, Dashboard công khai sẽ tự động chỉ hiện sự kiện MỚI NHẤT. Khảo sát chi tiết (biểu đồ, danh sách, báo cáo) vẫn luôn cần admin key riêng dù sự kiện có công khai hay không.</p>
+      <button class="btn btn-outline btn-sm" id="save-vis-btn" onclick="admSaveEventVisibility()">💾 Lưu hiển thị</button>
+    </div>
     <div class="card">
       <div class="card-title">Thông tin sự kiện</div>
       <div class="field"><label>Tên sự kiện đầy đủ</label><input id="cfg-TenSuKien"></div>
@@ -593,13 +664,42 @@
   var coSizeAo = false;
   var coMu = false;
 
-  window.addEventListener('DOMContentLoaded', function () {
-    callApi('getEventsForClient', {})
+  // sharedAdminKey: đặt = key khi đăng nhập Admin thành công (xem admUnlockAdmin).
+  // Dashboard dùng biến này để gọi getEventsForClient ở chế độ ĐẦY ĐỦ quyền
+  // (thấy mọi sự kiện, không chỉ sự kiện được bật công khai) — nhờ vậy sau khi
+  // đăng nhập Admin, chuyển sang tab Dashboard vẫn xem được toàn bộ.
+  var sharedAdminKey = '';
+  var dashboardLoaded = false;
+
+  // ---------------------------------------------------------------------
+  // MÀN HÌNH CHỌN CHẾ ĐỘ (landing): "Xem Dashboard" (public) hoặc "Admin".
+  // Không còn tự tải sự kiện ngay khi mở trang — chỉ tải khi người dùng
+  // thực sự bấm vào 1 trong 2 lựa chọn, để tránh gọi API thừa và để Dashboard
+  // biết ngay từ đầu nó đang ở chế độ nào (public hay admin).
+  // ---------------------------------------------------------------------
+  function enterMode(mode) {
+    document.getElementById('landing-screen').classList.add('hidden');
+    document.getElementById('page-switch-bar').classList.remove('hidden');
+    goToPage(mode);
+    if (mode === 'dashboard' && !dashboardLoaded) initDashboardEvents();
+  }
+
+  function backToLanding() {
+    document.getElementById('landing-screen').classList.remove('hidden');
+    document.getElementById('page-switch-bar').classList.add('hidden');
+    document.getElementById('view-dashboard').classList.add('hidden');
+    document.getElementById('view-admin').classList.add('hidden');
+  }
+
+  function initDashboardEvents() {
+    dashboardLoaded = true;
+    document.getElementById('event-select').innerHTML = '<option>Đang tải danh sách sự kiện...</option>';
+    callApi('getEventsForClient', { adminKey: sharedAdminKey })
       .then(onEventsLoaded)
       .catch(function (err) {
         document.getElementById('event-select').innerHTML = '<option>Lỗi tải sự kiện</option>';
       });
-  });
+  }
 
   function onEventsLoaded(res) {
     if (!res.success || !res.data.length) {
@@ -610,14 +710,32 @@
     // Tab Events lưu sự kiện theo thứ tự được tạo (appendRow nối vào cuối), nên
     // sự kiện MỚI NHẤT luôn là phần tử cuối mảng trả về. Đảo ngược để hiện sự
     // kiện mới nhất lên đầu dropdown và chọn mặc định — sự kiện cũ vẫn xem được
-    // bằng cách chọn lại trong dropdown.
+    // bằng cách chọn lại trong dropdown (nếu chế độ hiện tại được phép thấy).
     EVENTS = res.data.slice().reverse();
     var sel = document.getElementById('event-select');
     sel.innerHTML = EVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
     currentEventId = EVENTS[0].EventId;
     document.getElementById('dashboard-content').classList.remove('hidden');
     document.getElementById('no-event-state').classList.add('hidden');
+    document.getElementById('dash-sub').textContent = res.isAdmin ?
+      'Chế độ Admin — xem được toàn bộ sự kiện' :
+      'Chế độ xem công khai — chỉ hiện sự kiện được BTC bật công khai';
     loadRegisterData();
+    surveyRaw = null;
+    attendeesRaw = [];
+    // Nếu đã đăng nhập Admin (sharedAdminKey có giá trị), mở khoá luôn phần chi
+    // tiết khảo sát — Admin có "full quyền", không cần nhập lại admin key ở
+    // cổng khoá riêng trong tab Khảo sát.
+    if (res.isAdmin && sharedAdminKey) {
+      surveyDetailKey = sharedAdminKey;
+      revealSurveyDetail(true);
+    } else {
+      surveyDetailKey = '';
+      surveyDetailUnlocked = false;
+      document.getElementById('survey-gate-card').classList.remove('hidden');
+      document.getElementById('survey-detail').classList.add('hidden');
+    }
+    if (!document.getElementById('panel-survey').classList.contains('hidden')) loadSurveyData();
   }
 
   function onEventChange() {
@@ -633,7 +751,7 @@
     document.getElementById('tab-survey').classList.toggle('active', t === 'survey');
     document.getElementById('panel-register').classList.toggle('hidden', t !== 'register');
     document.getElementById('panel-survey').classList.toggle('hidden', t !== 'survey');
-    if (t === 'survey' && !surveyRaw) loadSurveyData();
+    if (t === 'survey') loadSurveyData();
   }
 
   function loadRegisterData() {
@@ -733,13 +851,66 @@
     }).join('');
   }
 
+  // surveyDetailKey/surveyDetailUnlocked: điều khiển cổng khoá riêng của tab
+  // Khảo sát (biểu đồ/danh sách/báo cáo). Khác với sharedAdminKey (đăng nhập
+  // Admin toàn trang) — nhưng nếu đã đăng nhập Admin, onEventsLoaded tự gán
+  // surveyDetailKey = sharedAdminKey và mở khoá luôn (xem revealSurveyDetail).
+  var surveyDetailKey = '';
+  var surveyDetailUnlocked = false;
+
+  // loadSurveyData(): luôn tải phần ĐẾM SỐ công khai; chỉ tải phần chi tiết
+  // (biểu đồ, danh sách tham dự, báo cáo) nếu tab Khảo sát đã được mở khoá.
   function loadSurveyData() {
+    loadSurveyCounts();
+    if (surveyDetailUnlocked) loadSurveyDetail();
+  }
+
+  function loadSurveyCounts() {
     var btn = document.getElementById('survey-refresh-btn');
     btn.innerHTML = '⏳'; btn.disabled = true;
-    callApi('getSurveyDashboardData', { eventId: currentEventId })
+    callApi('getSurveyCounts', { eventId: currentEventId })
+      .then(function (res) {
+        btn.innerHTML = '🔄 Làm mới'; btn.disabled = false;
+        if (!res.success) return;
+        document.getElementById('sc-total').textContent = res.total;
+        document.getElementById('sc-done').textContent = res.doneCount;
+        document.getElementById('sc-pending').textContent = res.notDoneCount;
+      })
+      .catch(function () {
+        btn.innerHTML = '🔄 Làm mới'; btn.disabled = false;
+      });
+  }
+
+  function unlockSurveyDetail() {
+    var key = document.getElementById('survey-gate-key').value.trim();
+    if (!key) { document.getElementById('survey-gate-status').innerHTML = '<div class="status-banner status-err">Vui lòng nhập admin key.</div>'; return; }
+    var btn = document.getElementById('survey-gate-btn');
+    btn.textContent = 'Đang kiểm tra...'; btn.disabled = true;
+    callApi('adminPing', { adminKey: key }).then(function (res) {
+      btn.textContent = 'Mở khoá'; btn.disabled = false;
+      if (!res.success) {
+        document.getElementById('survey-gate-status').innerHTML = '<div class="status-banner status-err">❌ Sai admin key.</div>';
+        return;
+      }
+      surveyDetailKey = key;
+      revealSurveyDetail();
+    }).catch(function (err) {
+      btn.textContent = 'Mở khoá'; btn.disabled = false;
+      document.getElementById('survey-gate-status').innerHTML = '<div class="status-banner status-err">❌ Lỗi kết nối: ' + err.message + '</div>';
+    });
+  }
+
+  function revealSurveyDetail() {
+    surveyDetailUnlocked = true;
+    document.getElementById('survey-gate-card').classList.add('hidden');
+    document.getElementById('survey-detail').classList.remove('hidden');
+    loadSurveyDetail();
+  }
+
+  function loadSurveyDetail() {
+    callApi('getSurveyDashboardData', { eventId: currentEventId, adminKey: surveyDetailKey })
       .then(onSurveyLoaded)
       .catch(function (err) {
-        btn.innerHTML = '🔄 Làm mới'; btn.disabled = false;
         document.getElementById('survey-stats-grid').innerHTML = '<div class="empty-state">❌ Lỗi: ' + err.message + '</div>';
       });
     loadNotSurveyed();
@@ -860,7 +1031,7 @@
     document.getElementById('ns-loading').classList.remove('hidden');
     document.getElementById('ns-table-wrap').classList.add('hidden');
     document.getElementById('ns-empty').classList.add('hidden');
-    callApi('getAttendeesSurveyStatus', { eventId: currentEventId })
+    callApi('getAttendeesSurveyStatus', { eventId: currentEventId, adminKey: surveyDetailKey })
       .then(onNotSurveyedLoaded)
       .catch(function (err) {
         document.getElementById('ns-loading').classList.add('hidden');
@@ -938,14 +1109,13 @@
     }).join('');
   }
 
+  // Công khai — không cần admin key (theo yêu cầu BTC).
   function exportNotSurveyed() {
-    var adminKey = document.getElementById('ns-admin-key').value.trim();
-    if (!adminKey) { alert('Vui lòng nhập Admin key để xuất Excel.'); return; }
     var btn = document.getElementById('ns-export-btn');
     btn.innerHTML = '⏳ Đang tạo file...'; btn.disabled = true;
-    callApi('exportNotSurveyedExcel', { eventId: currentEventId, adminKey: adminKey })
+    callApi('exportNotSurveyedExcel', { eventId: currentEventId })
       .then(function (res) {
-        btn.innerHTML = '📥 Xuất Excel (chưa làm)'; btn.disabled = false;
+        btn.innerHTML = '📥 Xuất Excel (chưa khảo sát)'; btn.disabled = false;
         if (!res.success) { alert('❌ ' + res.error); return; }
         if (!res.count) { alert('Không có ai trong danh sách "chưa khảo sát" để xuất.'); return; }
         var byteChars = atob(res.base64);
@@ -961,19 +1131,45 @@
         document.body.removeChild(link);
       })
       .catch(function (err) {
-        btn.innerHTML = '📥 Xuất Excel (chưa làm)'; btn.disabled = false;
+        btn.innerHTML = '📥 Xuất Excel (chưa khảo sát)'; btn.disabled = false;
+        alert('❌ Lỗi: ' + err.message);
+      });
+  }
+
+  // Công khai — không cần admin key. Loại trừ Phòng ban = "MSN" theo yêu cầu BTC.
+  function exportPendingRegistrations() {
+    var btn = document.getElementById('pending-export-btn');
+    btn.innerHTML = '⏳ Đang tạo file...'; btn.disabled = true;
+    callApi('exportPendingRegistrationsExcel', { eventId: currentEventId })
+      .then(function (res) {
+        btn.innerHTML = '📥 Xuất Excel (chưa xác nhận)'; btn.disabled = false;
+        if (!res.success) { alert('❌ ' + res.error); return; }
+        if (!res.count) { alert('Không có ai trong danh sách "chưa xác nhận" để xuất.'); return; }
+        var byteChars = atob(res.base64);
+        var byteNumbers = new Array(byteChars.length);
+        for (var i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        var byteArray = new Uint8Array(byteNumbers);
+        var blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = res.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      })
+      .catch(function (err) {
+        btn.innerHTML = '📥 Xuất Excel (chưa xác nhận)'; btn.disabled = false;
         alert('❌ Lỗi: ' + err.message);
       });
   }
 
   function exportSurveyReport() {
-    var adminKey = document.getElementById('report-admin-key').value.trim();
-    if (!adminKey) { alert('Vui lòng nhập Admin key để xuất báo cáo.'); return; }
+    if (!surveyDetailKey) { alert('Vui lòng mở khoá chi tiết khảo sát trước (nhập admin key ở trên).'); return; }
     var btn = document.getElementById('report-export-btn');
     var statusEl = document.getElementById('report-status');
     btn.innerHTML = '⏳ Đang tạo file...'; btn.disabled = true;
     statusEl.textContent = '';
-    callApi('exportSurveyReportExcel', { eventId: currentEventId, adminKey: adminKey })
+    callApi('exportSurveyReportExcel', { eventId: currentEventId, adminKey: surveyDetailKey })
       .then(function (res) {
         btn.innerHTML = '📊 Xuất báo cáo tổng kết Excel'; btn.disabled = false;
         if (!res.success) { statusEl.textContent = '❌ ' + res.error; return; }
@@ -1024,6 +1220,12 @@
         return;
       }
       admADMIN_KEY_VALUE = key;
+      // Chia sẻ key này với Dashboard: nhờ vậy nếu người dùng chuyển sang tab
+      // "📊 Dashboard" sau khi đăng nhập Admin, họ có "full quyền" — thấy mọi
+      // sự kiện (kể cả sự kiện chưa bật công khai) và mở khoá luôn chi tiết
+      // khảo sát mà không phải nhập lại admin key ở cổng khoá riêng.
+      sharedAdminKey = key;
+      dashboardLoaded = false; // buộc Dashboard tải lại với quyền admin ở lần vào tiếp theo
       document.getElementById('gate-screen').classList.add('hidden');
       document.getElementById('admin-root').classList.remove('hidden');
       admInitAdminPage();
@@ -1034,7 +1236,7 @@
   }
 
   function admInitAdminPage() {
-    callApi('getEventsForClient', {}).then(admOnEventsLoaded).catch(function (err) {
+    callApi('getEventsForClient', { adminKey: admADMIN_KEY_VALUE }).then(admOnEventsLoaded).catch(function (err) {
       admShowStatus('❌ Lỗi tải danh sách sự kiện: ' + err.message, false);
     });
     admInitRichTextToolbars();
@@ -1097,6 +1299,7 @@
       'Mã sự kiện: <code>' + admCurrentEventId + '</code> · Trang đăng ký: <code>' + (ev.PageDangKy||'—') + '</code> · Trang khảo sát: <code>' + (ev.PageKhaoSat||'—') + '</code>';
     document.getElementById('survey-preview-link').innerHTML =
       'Xem trước trang khảo sát: <a href="' + admFRONTEND_BASE_URL + '/survey.html?event=' + encodeURIComponent(admCurrentEventId) + '" target="_blank">mở trang khảo sát</a>';
+    document.getElementById('cfg-CongKhaiDashboard').checked = !!ev.CongKhaiDashboard;
 
     callApi('adminGetQuestions', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE })
       .then(admOnQuestionsLoaded)
@@ -1184,7 +1387,7 @@
         btn.innerHTML = '💾 Lưu cấu trúc cột'; btn.disabled = false;
         if (res.success) {
           admShowStatus('✅ Đã lưu cấu trúc cột cho sự kiện này.', true);
-          callApi('getEventsForClient', {}).then(function (r) { if (r.success) admEVENTS = r.data.slice().reverse(); });
+          callApi('getEventsForClient', { adminKey: admADMIN_KEY_VALUE }).then(function (r) { if (r.success) admEVENTS = r.data.slice().reverse(); });
         } else {
           admShowStatus('❌ ' + res.error, false);
         }
@@ -1378,7 +1581,7 @@
           'Tiếp theo: trang đăng ký/khảo sát dùng chung register.html/survey.html có sẵn (chỉ cần đúng ?event=' + res.eventId + ' trên URL) — không cần tạo file HTML riêng nữa.</div>';
         document.getElementById('ne-TenSuKien').value = '';
         document.getElementById('ne-EventId').value = '';
-        callApi('getEventsForClient', {}).then(function (r) {
+        callApi('getEventsForClient', { adminKey: admADMIN_KEY_VALUE }).then(function (r) {
           if (r.success) {
             admEVENTS = r.data.slice().reverse();
             var sel = document.getElementById('adm-event-select');
@@ -1506,6 +1709,27 @@
 
   function admSyncColor(key) {
     document.getElementById('cfg-' + key).value = document.getElementById('cfg-' + key + '-picker').value;
+  }
+
+  // Bật/tắt sự kiện hiện công khai (không cần admin key) trên Dashboard —
+  // ghi vào cột CongKhaiDashboard của tab Events (khác admSaveConfig, vốn ghi
+  // vào tab Config riêng của từng sự kiện).
+  function admSaveEventVisibility() {
+    var congKhai = document.getElementById('cfg-CongKhaiDashboard').checked;
+    var btn = document.getElementById('save-vis-btn');
+    btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
+    callApi('adminSetEventVisibility', { eventId: admCurrentEventId, payload: { congKhai: congKhai }, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = '💾 Lưu hiển thị'; btn.disabled = false;
+        if (!res.success) { admShowStatus('❌ ' + res.error, false); return; }
+        var ev = admEVENTS.find(function (e) { return e.EventId === admCurrentEventId; });
+        if (ev) ev.CongKhaiDashboard = congKhai;
+        admShowStatus('✅ Đã lưu. ' + (congKhai ? 'Sự kiện này giờ hiện công khai trên Dashboard.' : 'Sự kiện này đã ẩn khỏi Dashboard công khai.'), true);
+      })
+      .catch(function (err) {
+        btn.innerHTML = '💾 Lưu hiển thị'; btn.disabled = false;
+        admShowStatus('❌ Lỗi kết nối: ' + err.message, false);
+      });
   }
 
   function admSaveConfig() {
