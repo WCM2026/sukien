@@ -176,15 +176,17 @@
   }
 
   /* ---- Màn hình chọn Xem Dashboard / Admin (landing) ---- */
-  .landing-wrap{max-width:460px;margin:64px auto;text-align:center}
-  .landing-wrap h1{font-size:22px;font-weight:800;margin-bottom:6px}
-  .landing-wrap p{color:var(--muted);font-size:13px;margin-bottom:26px}
+  .landing-overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:radial-gradient(circle at 28% 18%,#ff5347 0%,transparent 55%),linear-gradient(135deg,#c81e14 0%,#7a0e09 75%)}
+  .landing-card{width:100%;max-width:380px;background:var(--card);border-radius:24px;padding:38px 32px 32px;box-shadow:0 24px 60px rgba(0,0,0,.35);text-align:center}
+  .landing-icon{font-size:42px;line-height:1;margin-bottom:14px}
+  .landing-card h1{font-size:21px;font-weight:800;margin-bottom:6px;color:var(--text)}
+  .landing-card .landing-sub{color:var(--muted);font-size:13px;margin-bottom:28px}
   .landing-choices{display:flex;flex-direction:column;gap:14px}
-  .landing-btn{display:flex;align-items:center;gap:14px;text-align:left;padding:18px 20px;border-radius:14px;border:1.5px solid var(--border);background:white;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px rgba(0,0,0,.05);transition:border-color .15s,transform .15s}
-  .landing-btn:hover{border-color:var(--primary);transform:translateY(-1px)}
-  .landing-btn .lb-icon{font-size:26px;flex-shrink:0}
+  .landing-btn{display:flex;align-items:center;gap:14px;text-align:left;padding:16px 18px;border-radius:14px;border:1.5px solid var(--border);background:white;cursor:pointer;font-family:inherit;transition:border-color .15s,transform .15s,box-shadow .15s}
+  .landing-btn:hover{border-color:var(--primary);transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.08)}
+  .landing-btn .lb-icon{font-size:24px;flex-shrink:0}
   .landing-btn .lb-title{font-size:15px;font-weight:800;color:var(--text)}
-  .landing-btn .lb-sub{font-size:12px;color:var(--muted);margin-top:2px}
   .back-to-landing{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px}
   .back-to-landing:hover{color:var(--primary)}
 
@@ -199,18 +201,21 @@
 <body>
 <div class="page-center">
 
-<div id="landing-screen" class="landing-wrap">
-  <h1>Quản lý sự kiện WinCommerce</h1>
-  <p>Chọn chế độ bạn muốn vào</p>
-  <div class="landing-choices">
-    <button class="landing-btn" onclick="enterMode('dashboard')">
-      <span class="lb-icon">📊</span>
-      <span><span class="lb-title">Xem Dashboard</span><br><span class="lb-sub">Xem công khai — không cần admin key</span></span>
-    </button>
-    <button class="landing-btn" onclick="enterMode('admin')">
-      <span class="lb-icon">⚙️</span>
-      <span><span class="lb-title">Admin</span><br><span class="lb-sub">Đăng nhập admin key — toàn quyền quản lý & xem đầy đủ</span></span>
-    </button>
+<div id="landing-screen" class="landing-overlay">
+  <div class="landing-card">
+    <div class="landing-icon">🏆</div>
+    <h1>Quản lý sự kiện WinCommerce</h1>
+    <p class="landing-sub">Chọn chế độ bạn muốn vào</p>
+    <div class="landing-choices">
+      <button class="landing-btn" onclick="enterMode('dashboard')">
+        <span class="lb-icon">📊</span>
+        <span class="lb-title">Xem Dashboard</span>
+      </button>
+      <button class="landing-btn" onclick="enterMode('admin')">
+        <span class="lb-icon">⚙️</span>
+        <span class="lb-title">Admin</span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1220,15 +1225,19 @@
         return;
       }
       admADMIN_KEY_VALUE = key;
-      // Chia sẻ key này với Dashboard: nhờ vậy nếu người dùng chuyển sang tab
-      // "📊 Dashboard" sau khi đăng nhập Admin, họ có "full quyền" — thấy mọi
+      // Chia sẻ key này với Dashboard: nhờ vậy khi tự động chuyển sang tab
+      // "📊 Dashboard" ngay sau khi đăng nhập, họ có "full quyền" — thấy mọi
       // sự kiện (kể cả sự kiện chưa bật công khai) và mở khoá luôn chi tiết
       // khảo sát mà không phải nhập lại admin key ở cổng khoá riêng.
       sharedAdminKey = key;
-      dashboardLoaded = false; // buộc Dashboard tải lại với quyền admin ở lần vào tiếp theo
+      dashboardLoaded = false; // buộc Dashboard tải lại với quyền admin
       document.getElementById('gate-screen').classList.add('hidden');
       document.getElementById('admin-root').classList.remove('hidden');
       admInitAdminPage();
+      // Vào thẳng Dashboard (đã có toàn quyền) ngay sau khi đăng nhập — không
+      // bắt người dùng phải quay lại màn hình chọn chế độ rồi bấm lại từ đầu.
+      document.getElementById('page-switch-bar').classList.remove('hidden');
+      goToPage('dashboard');
     }).catch(function (err) {
       btn.innerHTML = 'Vào trang Admin'; btn.disabled = false;
       document.getElementById('gate-status').innerHTML = '<div class="status-banner status-err">❌ Lỗi kết nối: ' + err.message + '</div>';
@@ -1757,6 +1766,11 @@
     document.getElementById('view-admin').classList.toggle('hidden', page !== 'admin');
     document.getElementById('page-btn-dashboard').classList.toggle('active', page === 'dashboard');
     document.getElementById('page-btn-admin').classList.toggle('active', page === 'admin');
+    // Tự tải sự kiện cho Dashboard nếu chưa từng tải (hoặc vừa bị buộc tải lại
+    // sau khi đăng nhập Admin) — nhờ vậy bấm nút "📊 Dashboard" luôn hoạt động
+    // đúng dù người dùng vào từ đường nào, không cần quay lại màn hình chọn
+    // chế độ ban đầu.
+    if (page === 'dashboard' && !dashboardLoaded) initDashboardEvents();
   }
 
 </script>
