@@ -79,7 +79,7 @@
   .ns-count{font-size:12px;color:var(--muted)}
   .ns-count b{color:var(--danger);font-size:14px}
   .ns-table-scroll{max-height:760px;overflow-y:auto}
-  .ns-table-scroll thead th{position:sticky;top:0;z-index:1}
+  .ns-table-scroll thead th{position:sticky;top:0;z-index:2;background:var(--primary-dark);box-shadow:0 2px 4px rgba(0,0,0,.15)}
   .th-sortable{cursor:pointer;user-select:none;white-space:nowrap}
   .th-sortable:hover{background:rgba(255,255,255,.12)}
   .sort-arrow{font-size:10px;opacity:.55;margin-left:3px}
@@ -787,8 +787,7 @@
     allData = res.data || [];
     coSizeAo = !!res.coSizeAo;
     coMu = !!res.coMu;
-    document.getElementById('register-table-head').innerHTML =
-      '<th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th>' + (coSizeAo ? '<th>Size áo</th>' : '') + (coMu ? '<th>Mũ</th>' : '') + '<th>Tham dự</th>';
+    renderRegisterHead();
     document.getElementById('last-updated').textContent = 'Cập nhật: ' + new Date().toLocaleTimeString('vi-VN');
 
     var total = allData.length;
@@ -809,9 +808,21 @@
     applyFilter();
   }
 
+  // Header bảng "Danh sách chi tiết" đổi động theo bộ lọc: riêng bộ lọc
+  // "Không tham dự" hiện cột Lý do (không tham dự) thay cho Size áo/Mũ, vì
+  // 2 cột đó không có ý nghĩa với người không tham dự.
+  function renderRegisterHead() {
+    var extraCols = currentFilter === 'no' ?
+      '<th>Lý do</th>' :
+      (coSizeAo ? '<th>Size áo</th>' : '') + (coMu ? '<th>Mũ</th>' : '');
+    document.getElementById('register-table-head').innerHTML =
+      '<th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th>' + extraCols + '<th>Tham dự</th>';
+  }
+
   function setFilter(f) {
     currentFilter = f;
     ['all','yes','no','pending'].forEach(function (k) { document.getElementById('f-' + k).classList.toggle('active', k === f); });
+    renderRegisterHead();
     applyFilter();
   }
 
@@ -845,13 +856,14 @@
       var badge = dk === 'Có tham dự' ? '<span class="badge badge-yes">✅ Tham dự</span>' :
                   dk === 'Không tham dự' ? '<span class="badge badge-no">❌ Không tham dự</span>' :
                   '<span class="badge badge-pending">⏳ Chưa phản hồi</span>';
-      var sizeCell = coSizeAo ? '<td><div class="td-sub">'+(r.sizeAo||'—')+'</div></td>' : '';
-      var hatCell = coMu ? '<td><div class="td-sub">'+(r.mu||'—')+'</div></td>' : '';
+      var extraCells = currentFilter === 'no' ?
+        '<td><div class="td-sub">' + (r.lyDo || '—') + '</div></td>' :
+        (coSizeAo ? '<td><div class="td-sub">'+(r.sizeAo||'—')+'</div></td>' : '') +
+        (coMu ? '<td><div class="td-sub">'+(r.mu||'—')+'</div></td>' : '');
       return '<tr><td><div class="td-name" style="font-size:12px">'+r.msnv+'</div></td>'+
              '<td><div class="td-name">'+r.hoTen+'</div></td>'+
              '<td><div class="td-sub">'+(r.phongBan||'—')+'</div></td>'+
-             sizeCell +
-             hatCell +
+             extraCells +
              '<td>'+badge+'</td></tr>';
     }).join('');
   }
