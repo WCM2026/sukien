@@ -536,8 +536,8 @@
     </div>
 
     <div class="card">
-      <div class="card-title">Đồng phục (size áo / mũ)</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Bật/tắt cột Size áo và Mũ ở tab "Cấu trúc cột dữ liệu". Ảnh minh hoạ dưới đây (nếu có) sẽ hiện ngay phía trên các lựa chọn tương ứng trên trang Đăng ký, giúp nhân viên dễ hình dung trước khi chọn.</p>
+      <div class="card-title">Đồng phục (size áo / size quần / mũ)</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Bật/tắt cột Size áo, Size quần và Mũ ở tab "Cấu trúc dữ liệu" (mỗi sự kiện bật/tắt riêng, để trống cột nào thì bước tương ứng tự ẩn trên trang Đăng ký). Ảnh minh hoạ dưới đây (nếu có) sẽ hiện ngay phía trên các lựa chọn tương ứng trên trang Đăng ký, giúp nhân viên dễ hình dung trước khi chọn. Riêng size quần dùng bảng size tham khảo có sẵn trong trang Đăng ký, không cần ảnh minh hoạ riêng.</p>
       <div class="field-row">
         <div class="field"><label>URL ảnh minh hoạ size áo (tuỳ chọn)</label><input id="cfg-AnhMinhHoaAo" placeholder="https://..."></div>
         <div class="field"><label>URL ảnh minh hoạ mũ (tuỳ chọn)</label><input id="cfg-AnhMinhHoaMu" placeholder="https://..."></div>
@@ -593,6 +593,7 @@
       <div class="colmap-section-title">Cột tuỳ chọn</div>
       <div class="colmap-grid">
         <div class="colmap-field"><label>Cột Size áo (để trống nếu sự kiện này không có)</label><input id="cm-ColSizeAo" placeholder="Để trống = không dùng"></div>
+        <div class="colmap-field"><label>Cột Size quần (để trống nếu sự kiện này không có)</label><input id="cm-ColSizeQuan" placeholder="Để trống = không dùng"><div class="colmap-hint">Độc lập hoàn toàn với Size áo — nên chọn 1 cột trống. Để trống thì bước chọn size quần sẽ tự ẩn trên trang Đăng ký.</div></div>
         <div class="colmap-field"><label>Cột Email (để trống nếu sự kiện này không có)</label><input id="cm-ColEmail" placeholder="Để trống = không dùng"><div class="colmap-hint">Dùng để xuất Excel danh sách "chưa khảo sát" kèm email trên Dashboard.</div></div>
         <div class="colmap-field"><label>Cột Mũ (để trống nếu sự kiện này không có)</label><input id="cm-ColMu" placeholder="Để trống = không dùng"><div class="colmap-hint">Hệ thống ghi "Đã có" hoặc "Chưa có/Thất lạc" vào cột này — nên chọn 1 cột trống. Độc lập hoàn toàn với Size áo.</div></div>
       </div>
@@ -668,6 +669,7 @@
   var surveyRaw = null;
   var coSizeAo = false;
   var coMu = false;
+  var coSizeQuan = false;
 
   // sharedAdminKey: đặt = key khi đăng nhập Admin thành công (xem admUnlockAdmin).
   // Dashboard dùng biến này để gọi getEventsForClient ở chế độ ĐẦY ĐỦ quyền
@@ -787,6 +789,7 @@
     allData = res.data || [];
     coSizeAo = !!res.coSizeAo;
     coMu = !!res.coMu;
+    coSizeQuan = !!res.coSizeQuan;
     renderRegisterHead();
     document.getElementById('last-updated').textContent = 'Cập nhật: ' + new Date().toLocaleTimeString('vi-VN');
 
@@ -809,12 +812,12 @@
   }
 
   // Header bảng "Danh sách chi tiết" đổi động theo bộ lọc: riêng bộ lọc
-  // "Không tham dự" hiện cột Lý do (không tham dự) thay cho Size áo/Mũ, vì
-  // 2 cột đó không có ý nghĩa với người không tham dự.
+  // "Không tham dự" hiện cột Lý do (không tham dự) thay cho Size áo/Size quần/Mũ, vì
+  // các cột đó không có ý nghĩa với người không tham dự.
   function renderRegisterHead() {
     var extraCols = currentFilter === 'no' ?
       '<th>Lý do</th>' :
-      (coSizeAo ? '<th>Size áo</th>' : '') + (coMu ? '<th>Mũ</th>' : '');
+      (coSizeAo ? '<th>Size áo</th>' : '') + (coSizeQuan ? '<th>Size quần</th>' : '') + (coMu ? '<th>Mũ</th>' : '');
     document.getElementById('register-table-head').innerHTML =
       '<th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th>' + extraCols + '<th>Tham dự</th>';
   }
@@ -859,6 +862,7 @@
       var extraCells = currentFilter === 'no' ?
         '<td><div class="td-sub">' + (r.lyDo || '—') + '</div></td>' :
         (coSizeAo ? '<td><div class="td-sub">'+(r.sizeAo||'—')+'</div></td>' : '') +
+        (coSizeQuan ? '<td><div class="td-sub">'+(r.sizeQuan||'—')+'</div></td>' : '') +
         (coMu ? '<td><div class="td-sub">'+(r.mu||'—')+'</div></td>' : '');
       return '<tr><td><div class="td-name" style="font-size:12px">'+r.msnv+'</div></td>'+
              '<td><div class="td-name">'+r.hoTen+'</div></td>'+
@@ -1379,6 +1383,7 @@
         document.getElementById('cm-ColDangKy').value = c.ColDangKy || '';
         document.getElementById('cm-ColLyDo').value = c.ColLyDo || '';
         document.getElementById('cm-ColSizeAo').value = c.ColSizeAo || '';
+        document.getElementById('cm-ColSizeQuan').value = c.ColSizeQuan || '';
         document.getElementById('cm-ColEmail').value = c.ColEmail || '';
         document.getElementById('cm-ColMu').value = c.ColMu || '';
       })
@@ -1398,6 +1403,7 @@
       ColDangKy: document.getElementById('cm-ColDangKy').value.trim(),
       ColLyDo: document.getElementById('cm-ColLyDo').value.trim(),
       ColSizeAo: document.getElementById('cm-ColSizeAo').value.trim(),
+      ColSizeQuan: document.getElementById('cm-ColSizeQuan').value.trim(),
       ColEmail: document.getElementById('cm-ColEmail').value.trim(),
       ColMu: document.getElementById('cm-ColMu').value.trim()
     };

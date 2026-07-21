@@ -122,6 +122,39 @@
   .size-pill:hover { border-color:var(--primary); }
   .size-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; transform:scale(1.06); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
 
+  /* ---- Size quần (mới) — cùng pattern với size-box (áo), thêm nút xem bảng size tham khảo ---- */
+  .size-quan-box { margin-top:20px; animation:fadeUp .3s ease; }
+  .size-quan-label { font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .sizeref-link { font-size:12px; font-weight:700; color:var(--primary); background:rgba(226,35,26,.08); border:none; border-radius:999px; padding:6px 12px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .sizeref-link:hover { background:rgba(226,35,26,.14); }
+  .size-quan-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .size-quan-pill { padding:10px 16px; border-radius:10px; border:1.5px solid var(--border); background:white; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; color:var(--text); transition:transform .12s, border-color .12s, background .12s, box-shadow .12s; }
+  .size-quan-pill:hover { border-color:var(--primary); }
+  .size-quan-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; transform:scale(1.06); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
+  .size-quan-other { margin-top:12px; animation:fadeUp .25s ease; }
+  .size-quan-other input { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px; color:var(--text); outline:none; }
+  .size-quan-other input:focus { border-color:var(--primary); }
+  .size-quan-other-hint { font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.5; }
+
+  /* Modal bảng size quần tham khảo */
+  .sizeref-overlay { position:fixed; inset:0; background:rgba(15,15,15,.55); z-index:10000; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  .sizeref-overlay.open { opacity:1; pointer-events:auto; }
+  .sizeref-modal { width:100%; max-width:560px; max-height:82vh; background:#fff; border-radius:20px 20px 0 0; padding:20px 18px 24px; overflow-y:auto; transform:translateY(24px); transition:transform .25s cubic-bezier(.16,1,.3,1); }
+  .sizeref-overlay.open .sizeref-modal { transform:translateY(0); }
+  @media(min-width:640px){ .sizeref-overlay{align-items:center} .sizeref-modal{border-radius:20px; transform:translateY(0) scale(.97)} .sizeref-overlay.open .sizeref-modal{transform:translateY(0) scale(1)} }
+  .sizeref-modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .sizeref-modal-title { font-size:16px; font-weight:800; }
+  .sizeref-modal-close { border:none; background:var(--bg); width:32px; height:32px; border-radius:50%; font-size:16px; cursor:pointer; color:var(--muted); }
+  .sizeref-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:12px; }
+  .sizeref-table { width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap; }
+  .sizeref-table th, .sizeref-table td { padding:9px 10px; text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); }
+  .sizeref-table th:last-child, .sizeref-table td:last-child { border-right:none; }
+  .sizeref-table th:first-child, .sizeref-table td:first-child { text-align:left; position:sticky; left:0; background:#fff; font-weight:700; }
+  .sizeref-table thead th { background:var(--bg); font-weight:700; color:var(--text); }
+  .sizeref-table thead th:first-child { background:var(--bg); }
+  .sizeref-table tr:last-child td { border-bottom:none; }
+  .sizeref-note { font-size:11.5px; color:var(--muted); margin-top:12px; line-height:1.6; }
+
   .illustration-img { display:block; max-width:100%; max-height:160px; margin:10px 0 14px; border-radius:10px; object-fit:contain; }
 
   .hat-box { margin-top:20px; animation:fadeUp .3s ease; }
@@ -263,6 +296,17 @@
         <img class="illustration-img hidden" id="size-illustration" alt="Minh hoạ size áo">
         <div class="size-row" id="size-row"></div>
       </div>
+      <div class="size-quan-box hidden" id="size-quan-section">
+        <div class="size-quan-label">
+          <span>👖 Chọn size quần</span>
+          <button type="button" class="sizeref-link" onclick="openSizeRefModal()">📏 Xem bảng size</button>
+        </div>
+        <div class="size-quan-row" id="size-quan-row"></div>
+        <div class="size-quan-other hidden" id="size-quan-other-box">
+          <input type="text" id="size-quan-other-input" placeholder="Ghi số đo thực tế (chiều dài quần, vòng lưng, cân nặng...)" oninput="onSizeQuanOtherInput()">
+          <div class="size-quan-other-hint">Vui lòng mô tả rõ số đo để BTC chuẩn bị đúng size, ví dụ: "Dài 105cm, lưng 90cm, nặng 90kg".</div>
+        </div>
+      </div>
       <div class="hat-box hidden" id="hat-section">
         <div class="hat-label">🧢 Tình trạng mũ</div>
         <img class="illustration-img hidden" id="hat-illustration" alt="Minh hoạ mũ">
@@ -292,6 +336,42 @@
   <div id="result-content"></div>
   <div id="result-recap"></div>
   <button class="btn btn-outline btn-full" onclick="resetForm()" style="margin-top:16px">↩ Đăng ký nhân viên khác</button>
+</div>
+
+</div>
+
+<!-- MODAL: Bảng size quần tham khảo -->
+<div class="sizeref-overlay" id="sizeref-overlay" onclick="if(event.target===this) closeSizeRefModal()">
+  <div class="sizeref-modal">
+    <div class="sizeref-modal-head">
+      <div class="sizeref-modal-title">📏 Bảng size quần tham khảo</div>
+      <button type="button" class="sizeref-modal-close" onclick="closeSizeRefModal()">✕</button>
+    </div>
+    <div class="sizeref-table-wrap">
+      <table class="sizeref-table">
+        <thead>
+          <tr>
+            <th>Size</th><th>2XS</th><th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>2XL</th><th>3XL</th><th>4XL</th><th>5XL</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Chiều dài quần (cm)</td><td>90</td><td>93</td><td>96</td><td>98</td><td>100</td><td>101</td><td>102</td><td>103</td><td>104</td><td>104</td>
+          </tr>
+          <tr>
+            <td>Lưng quần (cm)</td><td>72</td><td>75</td><td>78</td><td>80</td><td>82</td><td>84</td><td>86</td><td>88</td><td>92</td><td>96</td>
+          </tr>
+          <tr>
+            <td>Cân nặng tham khảo (kg)</td><td>40–44</td><td>44–48</td><td>45–50</td><td>51–55</td><td>56–62</td><td>63–68</td><td>69–73</td><td>74–79</td><td>80–85</td><td>86–95</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="sizeref-note">
+      Chiều cao tham khảo: <b>1,52 – 1,72 m</b>.<br>
+      Trường hợp cân nặng/chiều cao ngoài dải tham khảo, vui lòng chọn <b>"Khác"</b> ở bước chọn size quần và ghi rõ số đo thực tế (chiều dài quần, vòng lưng, cân nặng...).
+    </div>
+  </div>
 </div>
 
 <script>
@@ -387,6 +467,15 @@
   var SIZE_ILLUSTRATION_URL = '';
   var HAT_ILLUSTRATION_URL  = '';
 
+  // ---- Size quần (mới) ---------------------------------------------------
+  // "Khác" cho phép nhập số đo thực tế khi cân nặng/chiều cao ngoài bảng tham
+  // khảo (xem ghi chú trong modal bảng size). Giá trị thực gửi lên server khi
+  // chọn "Khác" là nội dung người dùng gõ (selectedSizeQuanOther), không phải
+  // chữ "Khác" — để BTC đọc được số đo cụ thể ngay trong cột Size quần.
+  var SIZE_QUAN_OPTIONS = ['2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'Khác'];
+  var selectedSizeQuan = null;
+  var selectedSizeQuanOther = '';
+
   function onFoundEmployee(result) {
     var btn = document.getElementById('lookup-btn');
     btn.innerHTML = '🔍 Tìm'; btn.disabled = false;
@@ -406,6 +495,15 @@
     selectedSize = currentEmployee.sizeAo || null;
     selectedHat = currentEmployee.mu || null;
 
+    // Size quần đã lưu trước đó: nếu không khớp 1 trong các pill chuẩn thì coi là
+    // giá trị "Khác" tự nhập, hiển thị lại đúng ô nhập số đo.
+    selectedSizeQuan = currentEmployee.sizeQuan || null;
+    selectedSizeQuanOther = '';
+    if (selectedSizeQuan && SIZE_QUAN_OPTIONS.indexOf(selectedSizeQuan) === -1) {
+      selectedSizeQuanOther = selectedSizeQuan;
+      selectedSizeQuan = 'Khác';
+    }
+
     if (currentEmployee.coSizeAo) {
       document.getElementById('size-row').innerHTML = SIZE_OPTIONS.map(function (s) {
         return '<button type="button" class="size-pill' + (s === selectedSize ? ' selected' : '') + '" onclick="selectSize(\'' + s + '\')">' + s + '</button>';
@@ -413,6 +511,18 @@
       var sImg = document.getElementById('size-illustration');
       if (SIZE_ILLUSTRATION_URL) { sImg.src = SIZE_ILLUSTRATION_URL; sImg.classList.remove('hidden'); }
       else { sImg.classList.add('hidden'); }
+    }
+    if (currentEmployee.coSizeQuan) {
+      document.getElementById('size-quan-row').innerHTML = SIZE_QUAN_OPTIONS.map(function (s) {
+        return '<button type="button" class="size-quan-pill' + (s === selectedSizeQuan ? ' selected' : '') + '" onclick="selectSizeQuan(\'' + s + '\')">' + s + '</button>';
+      }).join('');
+      var otherBox = document.getElementById('size-quan-other-box');
+      if (selectedSizeQuan === 'Khác') {
+        otherBox.classList.remove('hidden');
+        document.getElementById('size-quan-other-input').value = selectedSizeQuanOther;
+      } else {
+        otherBox.classList.add('hidden');
+      }
     }
     if (currentEmployee.coMu) {
       document.querySelectorAll('#hat-row .hat-pill').forEach(function (p) {
@@ -429,11 +539,12 @@
       var rows = '<div class="locked-detail-row"><span class="locked-key">Tình trạng</span><span class="locked-val" style="color:'+(isTham?'#0e9f6e':'#f05252')+'">'+dk+'</span></div>';
       if (!isTham) rows += '<div class="locked-detail-row"><span class="locked-key">Lý do</span><span class="locked-val">'+(currentEmployee.lyDo||'—')+'</span></div>';
       if (isTham && currentEmployee.coSizeAo && currentEmployee.sizeAo) rows += '<div class="locked-detail-row"><span class="locked-key">Size áo</span><span class="locked-val">'+currentEmployee.sizeAo+'</span></div>';
+      if (isTham && currentEmployee.coSizeQuan && currentEmployee.sizeQuan) rows += '<div class="locked-detail-row"><span class="locked-key">Size quần</span><span class="locked-val">'+currentEmployee.sizeQuan+'</span></div>';
       if (isTham && currentEmployee.coMu && currentEmployee.mu) rows += '<div class="locked-detail-row"><span class="locked-key">Mũ</span><span class="locked-val">'+currentEmployee.mu+'</span></div>';
       document.getElementById('locked-detail').innerHTML = rows;
     } else {
       hide('locked-section'); show('attend-form-wrap'); show('attend-section');
-      hide('reason-section'); hide('size-section'); hide('hat-section');
+      hide('reason-section'); hide('size-section'); hide('size-quan-section'); hide('hat-section');
       document.getElementById('btn-yes').className = 'choice-btn';
       document.getElementById('btn-no').className  = 'choice-btn';
     }
@@ -444,6 +555,28 @@
     document.querySelectorAll('.size-pill').forEach(function (p) { p.classList.toggle('selected', p.textContent === s); });
     showSubmitPreview();
   }
+
+  function selectSizeQuan(s) {
+    selectedSizeQuan = s;
+    document.querySelectorAll('.size-quan-pill').forEach(function (p) { p.classList.toggle('selected', p.textContent === s); });
+    var otherBox = document.getElementById('size-quan-other-box');
+    if (s === 'Khác') {
+      otherBox.classList.remove('hidden');
+      setTimeout(function () { document.getElementById('size-quan-other-input').focus(); }, 50);
+    } else {
+      otherBox.classList.add('hidden');
+      selectedSizeQuanOther = '';
+    }
+    showSubmitPreview();
+  }
+
+  function onSizeQuanOtherInput() {
+    selectedSizeQuanOther = document.getElementById('size-quan-other-input').value.trim();
+    showSubmitPreview();
+  }
+
+  function openSizeRefModal() { document.getElementById('sizeref-overlay').classList.add('open'); }
+  function closeSizeRefModal() { document.getElementById('sizeref-overlay').classList.remove('open'); }
 
   function selectHat(h) {
     selectedHat = h;
@@ -460,9 +593,10 @@
     if (attend) {
       hide('reason-section'); document.getElementById('reason-input').value = '';
       if (currentEmployee.coSizeAo) show('size-section'); else hide('size-section');
+      if (currentEmployee.coSizeQuan) show('size-quan-section'); else hide('size-quan-section');
       if (currentEmployee.coMu) show('hat-section'); else hide('hat-section');
     } else {
-      show('reason-section'); hide('size-section'); hide('hat-section');
+      show('reason-section'); hide('size-section'); hide('size-quan-section'); hide('hat-section');
     }
     showSubmitPreview(); show('step-submit');
   }
@@ -473,6 +607,10 @@
     html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Tham dự</span><strong style="color:'+(selectedAttend?'#0e9f6e':'#f05252')+'">'+(selectedAttend?'✅ Có tham dự':'❌ Không tham dự')+'</strong></div>';
     if (selectedAttend && currentEmployee.coSizeAo && selectedSize) {
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+selectedSize+'</strong></div>';
+    }
+    if (selectedAttend && currentEmployee.coSizeQuan && selectedSizeQuan) {
+      var szqDisplay = (selectedSizeQuan === 'Khác') ? ('Khác — ' + (selectedSizeQuanOther || '(chưa ghi số đo)')) : selectedSizeQuan;
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size quần</span><strong>'+szqDisplay+'</strong></div>';
     }
     if (selectedAttend && currentEmployee.coMu && selectedHat) {
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+selectedHat+'</strong></div>';
@@ -497,14 +635,25 @@
     if (selectedAttend && currentEmployee.coSizeAo && !selectedSize) {
       alert('Vui lòng chọn size áo'); return;
     }
+    if (selectedAttend && currentEmployee.coSizeQuan && !selectedSizeQuan) {
+      alert('Vui lòng chọn size quần'); return;
+    }
+    if (selectedAttend && currentEmployee.coSizeQuan && selectedSizeQuan === 'Khác' && !selectedSizeQuanOther) {
+      document.getElementById('size-quan-other-input').focus();
+      alert('Vui lòng ghi số đo thực tế cho size quần "Khác"'); return;
+    }
     if (selectedAttend && currentEmployee.coMu && !selectedHat) {
       alert('Vui lòng chọn tình trạng mũ'); return;
     }
     var btn = document.getElementById('submit-btn');
     btn.innerHTML = '<span class="spinner"></span> Đang lưu...'; btn.disabled = true;
+    var sizeQuanValue = (selectedAttend && currentEmployee.coSizeQuan)
+      ? (selectedSizeQuan === 'Khác' ? selectedSizeQuanOther : selectedSizeQuan)
+      : '';
     var payload = {
       msnv: currentEmployee.msnv, thamDu: selectedAttend, lyDo: !selectedAttend ? lyDo : '',
       sizeAo: (selectedAttend && currentEmployee.coSizeAo) ? selectedSize : '',
+      sizeQuan: sizeQuanValue,
       mu: (selectedAttend && currentEmployee.coMu) ? selectedHat : ''
     };
     callApi('submitRegistration', { eventId: EVENT_ID, payload: payload })
@@ -520,6 +669,7 @@
     html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Tham dự</span><strong style="color:'+(isTham?'#0e9f6e':'#f05252')+'">'+(isTham?'✅ Có tham dự':'❌ Không tham dự')+'</strong></div>';
     if (!isTham && emp.lyDo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Lý do</span><strong style="font-style:italic">'+emp.lyDo+'</strong></div>';
     if (isTham && emp.coSizeAo && emp.sizeAo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+emp.sizeAo+'</strong></div>';
+    if (isTham && emp.coSizeQuan && emp.sizeQuan) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size quần</span><strong>'+emp.sizeQuan+'</strong></div>';
     if (isTham && emp.coMu && emp.mu) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+emp.mu+'</strong></div>';
     html += '</div>';
     return html;
@@ -538,6 +688,9 @@
     currentEmployee.daXacNhan = true;
     currentEmployee.dangKy = selectedAttend ? 'Có tham dự' : 'Không tham dự';
     currentEmployee.sizeAo = selectedAttend && currentEmployee.coSizeAo ? selectedSize : currentEmployee.sizeAo;
+    currentEmployee.sizeQuan = selectedAttend && currentEmployee.coSizeQuan
+      ? (selectedSizeQuan === 'Khác' ? selectedSizeQuanOther : selectedSizeQuan)
+      : currentEmployee.sizeQuan;
     currentEmployee.mu     = selectedAttend && currentEmployee.coMu ? selectedHat : currentEmployee.mu;
     currentEmployee.lyDo   = !selectedAttend ? document.getElementById('reason-input').value.trim() : currentEmployee.lyDo;
     // Theo yêu cầu: sau khi đăng ký xong, ẩn toàn bộ form/thông tin khai báo phía trên,
@@ -576,6 +729,7 @@
 
   function resetForm() {
     currentEmployee = null; selectedAttend = null; selectedHat = null; selectedSize = null;
+    selectedSizeQuan = null; selectedSizeQuanOther = '';
     document.getElementById('msnv-input').value = '';
     document.getElementById('lookup-status').innerHTML = '';
     document.getElementById('reason-input').value = '';
@@ -593,6 +747,5 @@
     document.getElementById(id).innerHTML = '<div class="status-box '+map[type]+'">'+msg+'</div>';
   }
 </script>
-</div>
 </body>
 </html>
