@@ -112,6 +112,13 @@
   .field input:focus{border-color:var(--primary)}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .toggle-row{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer}
+  .toggle-row-sm{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:8px}
+  .mail-placeholder-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .mail-filter-row{display:flex;flex-direction:column;margin-top:4px}
+  .mail-progress-track{width:100%;height:8px;border-radius:4px;background:var(--bg);overflow:hidden;border:1px solid var(--border)}
+  .mail-progress-fill{height:100%;width:0%;background:var(--primary);transition:width .3s ease}
+  .mail-row-excluded{opacity:.45}
+  .mail-candidate-checkbox{width:16px;height:16px}
   .toggle-row input{width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
 
   .rte-toolbar{display:flex;gap:6px;margin-bottom:6px}
@@ -157,7 +164,7 @@
   .link-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   @media(max-width:640px){.link-grid{grid-template-columns:1fr}}
 
-  .preview-table-wrap{overflow-x:auto;border:1.5px solid var(--border);border-radius:10px;margin-top:10px;max-height:320px}
+  .preview-table-wrap{overflow-x:auto;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px;margin-top:10px;max-height:320px}
   .preview-table{border-collapse:collapse;font-size:12px;white-space:nowrap}
   .preview-table th{background:var(--bg);padding:6px 10px;border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--muted);position:sticky;top:0}
   .preview-table td{padding:6px 10px;border:1px solid var(--border);color:var(--text)}
@@ -394,6 +401,7 @@
   <button class="tab-btn" id="tab-config" onclick="admSwitchTab('config')">Cấu hình giao diện</button>
   <button class="tab-btn" id="tab-columns" onclick="admSwitchTab('columns')">Cấu trúc dữ liệu</button>
   <button class="tab-btn" id="tab-links" onclick="admSwitchTab('links')">Link &amp; QR</button>
+  <button class="tab-btn" id="tab-mail" onclick="admSwitchTab('mail')">📧 Gửi mail</button>
 </div>
 
 <div id="panel-newevent" class="hidden">
@@ -469,6 +477,7 @@
         <div class="field"><label>Địa điểm</label><input id="cfg-DiaDiem" placeholder="VD: Đà Lạt"></div>
       </div>
       <div class="field"><label>URL logo (ảnh PNG/JPG nền trong suốt)</label><input id="cfg-Logo" placeholder="https://..."></div>
+      <div class="field"><label>Email admin nhận OTP (tab "Gửi mail")</label><input id="cfg-AdminEmail" placeholder="ten1@winmart.masangroup.com; ten2@winmart.masangroup.com"><div class="colmap-hint" style="margin-top:4px">Có thể khai nhiều email cách nhau dấu ";" — mỗi lần mở tab "Gửi mail" hệ thống gửi mã OTP về (các) email này để xác nhận trước khi cho gửi mail thật.</div></div>
 
       <div class="field">
         <label>Mô tả trang đăng ký</label>
@@ -652,6 +661,104 @@
       </p>
       <button class="btn btn-primary btn-full" id="mm-export-btn" onclick="admExportMailMergeExcel()">📥 Xuất Excel Mail Merge</button>
       <p id="mm-status" style="font-size:12px;color:var(--muted);margin-top:10px"></p>
+    </div>
+  </div>
+
+  <div id="panel-mail" class="hidden">
+    <!-- Bước OTP: bắt buộc mỗi khi mở tab này trong 1 phiên mới (mailToken chỉ
+         sống trong biến JS, không lưu localStorage) -->
+    <div id="mail-otp-gate" class="card">
+      <div class="card-title">Xác thực để mở tab Gửi mail</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Vì đây là chức năng gửi email thật nhân danh công ty, ngoài admin key còn cần thêm mã OTP gửi về email admin đã khai ở tab "Cấu hình giao diện" (mục "Email admin nhận OTP").</p>
+      <button class="btn btn-outline btn-sm" id="mail-otp-request-btn" onclick="admRequestMailOtp()">📩 Gửi mã OTP</button>
+      <div id="mail-otp-sent-hint" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      <div class="field" style="margin-top:14px;max-width:220px">
+        <label>Nhập mã OTP (6 số)</label>
+        <input id="mail-otp-input" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter') admVerifyMailOtp()">
+      </div>
+      <button class="btn btn-primary btn-full" id="mail-otp-verify-btn" onclick="admVerifyMailOtp()">Xác nhận OTP</button>
+      <p id="mail-otp-status" style="font-size:12px;margin-top:10px"></p>
+    </div>
+
+    <!-- Nội dung thật của tab, chỉ hiện sau khi mailToken hợp lệ -->
+    <div id="mail-compose-area" class="hidden">
+      <div class="card">
+        <div class="card-title">Soạn thư mời</div>
+        <div class="field">
+          <label>Tiêu đề email</label>
+          <input id="mail-subject" placeholder="VD: [Thư mời] {HoTen} ơi, đăng ký tham dự sự kiện nhé!" onfocus="admMailLastFocusTarget='subject'">
+        </div>
+        <div class="mail-placeholder-row">
+          <span style="font-size:12px;color:var(--muted);margin-right:4px">Chèn nhanh:</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{HoTen}')">{HoTen}</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{MSNV}')">{MSNV}</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{PhongBan}')">{PhongBan}</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{ChucDanh}')">{ChucDanh}</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{LinkDangKy}')">{LinkDangKy}</button>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>Nội dung email</label>
+          <div class="rte-toolbar" data-target="mail-body">
+            <button type="button" class="rte-btn" data-cmd="bold"><b>B</b></button>
+            <select class="rte-size">
+              <option value="">Cỡ chữ</option>
+              <option value="2">Nhỏ</option>
+              <option value="3">Vừa</option>
+              <option value="5">Lớn</option>
+              <option value="6">Rất lớn</option>
+            </select>
+          </div>
+          <div class="rte-editable" id="mail-body" contenteditable="true" style="min-height:220px" onfocus="admMailLastFocusTarget='body'">
+            Chào {HoTen},<br><br>
+            Trân trọng kính mời bạn đăng ký tham dự sự kiện. Vui lòng bấm vào link bên dưới để xác nhận tham dự:<br><br>
+            <a href="{LinkDangKy}">{LinkDangKy}</a><br><br>
+            Trân trọng.
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" id="mail-test-btn" onclick="admSendTestMail()">✉️ Gửi thử về email admin</button>
+        </div>
+        <p id="mail-test-status" style="font-size:12px;margin-top:8px"></p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Chọn người nhận</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Bộ lọc dưới đây chỉ đổi trạng thái CHỌN SẴN — anh/chị vẫn có thể tick/bỏ tick tay từng người trong bảng cho các trường hợp đặc biệt trước khi gửi.</p>
+        <div class="mail-filter-row">
+          <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-confirmed" checked onchange="admApplyMailFilters()"><span>Loại trừ người đã xác nhận đăng ký (Có/Không tham dự)</span></label>
+          <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-notattend" onchange="admApplyMailFilters()"><span>Loại trừ người đã báo "Không tham dự"</span></label>
+          <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-surveyed" checked onchange="admApplyMailFilters()"><span>Loại trừ người đã khảo sát</span></label>
+          <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-noemail" checked disabled><span>Tự động loại trừ người không có email</span></label>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="admReloadMailCandidates()">🔄 Tải lại danh sách</button>
+          <button class="btn btn-outline btn-sm" onclick="admMailSelectAllVisible(true)">Chọn tất cả đang hiện</button>
+          <button class="btn btn-outline btn-sm" onclick="admMailSelectAllVisible(false)">Bỏ chọn tất cả đang hiện</button>
+          <span id="mail-select-summary" style="font-size:13px;color:var(--text);font-weight:600;margin-left:auto"></span>
+        </div>
+        <div id="mail-candidates-status" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+        <div class="preview-table-wrap" style="max-height:420px">
+          <table class="preview-table" id="mail-candidates-table"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Gửi</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Hệ thống gửi theo từng đợt nhỏ (khoảng 80 người/đợt) để tránh vượt giới hạn thời gian chạy của Google Apps Script — quá trình gửi hàng trăm/nghìn người có thể mất vài phút, đừng đóng tab trong lúc gửi.</p>
+        <button class="btn btn-primary btn-full" id="mail-send-btn" onclick="admSendAllMail()">📨 Gửi cho người đã chọn</button>
+        <div id="mail-send-progress" class="hidden" style="margin-top:14px">
+          <div class="mail-progress-track"><div class="mail-progress-fill" id="mail-progress-fill"></div></div>
+          <p id="mail-progress-text" style="font-size:12px;color:var(--muted);margin-top:6px"></p>
+        </div>
+        <div id="mail-send-result" style="font-size:13px;margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Thống kê mở mail (ước tính)</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Đo bằng pixel ẩn trong email — chỉ mang tính tương đối, không phải số chính xác tuyệt đối (nhiều mail client chặn tải ảnh ngoài nên số thực tế thường CAO hơn số đo được).</p>
+        <button class="btn btn-outline btn-sm" onclick="admLoadMailStats()">📊 Xem thống kê</button>
+        <div id="mail-stats-result" style="font-size:13px;margin-top:10px"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1216,6 +1323,12 @@
   /* ===================== ADMIN (namespaced với tiền tố adm) ===================== */
 
   var admEVENTS = [];
+  // ---- Trạng thái riêng cho tab "Gửi mail" ----
+  var admMailToken = '';           // cấp sau khi xác thực OTP đúng, sống 15 phút phía server, KHÔNG lưu localStorage
+  var admMailTokenEventId = '';    // mailToken chỉ hợp lệ cho đúng eventId đã xin lúc verify
+  var admMailCandidates = [];      // toàn bộ danh sách nhận về từ adminGetMailCandidates
+  var admMailExcluded = {};        // set các msnv bị bỏ chọn TAY (trường hợp đặc biệt), key = msnv gốc
+  var admMailSending = false;
   var admCurrentEventId = null;
   var admADMIN_KEY_VALUE = ''; // nhập ở màn hình gate-screen, giữ trong biến JS suốt session tab này
   var questions = [];
@@ -1316,6 +1429,7 @@
     admCurrentEventId = document.getElementById('adm-event-select').value;
     admLoadEventData();
     if (!document.getElementById('panel-links').classList.contains('hidden')) admRenderLinks();
+    if (!document.getElementById('panel-mail').classList.contains('hidden')) admOpenMailTab();
   }
 
   function admLoadEventData() {
@@ -1523,6 +1637,275 @@
       });
   }
 
+  /* ---------- TAB "GỬI MAIL" ---------- */
+
+  var admMailLastFocusTarget = 'body';
+
+  // Gọi mỗi khi bấm vào tab "Gửi mail". mailToken chỉ hợp lệ cho ĐÚNG sự kiện
+  // đã xin OTP — đổi sự kiện khác trong dropdown thì phải xin OTP lại.
+  function admOpenMailTab() {
+    if (admMailToken && admMailTokenEventId === admCurrentEventId) {
+      document.getElementById('mail-otp-gate').classList.add('hidden');
+      document.getElementById('mail-compose-area').classList.remove('hidden');
+      if (!admMailCandidates.length) admReloadMailCandidates();
+    } else {
+      admMailLockTab();
+    }
+  }
+
+  function admMailLockTab() {
+    admMailToken = ''; admMailTokenEventId = ''; admMailCandidates = [];
+    document.getElementById('mail-otp-gate').classList.remove('hidden');
+    document.getElementById('mail-compose-area').classList.add('hidden');
+    document.getElementById('mail-otp-input').value = '';
+    document.getElementById('mail-otp-status').textContent = '';
+    document.getElementById('mail-otp-sent-hint').textContent = '';
+  }
+
+  function admRequestMailOtp() {
+    var btn = document.getElementById('mail-otp-request-btn');
+    btn.innerHTML = '⏳ Đang gửi...'; btn.disabled = true;
+    callApi('adminRequestMailOtp', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = '📩 Gửi mã OTP'; btn.disabled = false;
+        if (!res.success) { document.getElementById('mail-otp-status').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>'; return; }
+        document.getElementById('mail-otp-sent-hint').textContent = 'Đã gửi mã OTP về ' + res.sentTo + ' (hiệu lực 5 phút).';
+        document.getElementById('mail-otp-status').textContent = '';
+      })
+      .catch(function (err) {
+        btn.innerHTML = '📩 Gửi mã OTP'; btn.disabled = false;
+        document.getElementById('mail-otp-status').innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + err.message + '</span>';
+      });
+  }
+
+  function admVerifyMailOtp() {
+    var otp = document.getElementById('mail-otp-input').value.trim();
+    if (!otp) { document.getElementById('mail-otp-status').innerHTML = '<span style="color:var(--danger)">Vui lòng nhập mã OTP.</span>'; return; }
+    var btn = document.getElementById('mail-otp-verify-btn');
+    btn.innerHTML = '⏳ Đang xác thực...'; btn.disabled = true;
+    callApi('adminVerifyMailOtp', { eventId: admCurrentEventId, otp: otp, adminKey: admADMIN_KEY_VALUE })
+      .then(function (res) {
+        btn.innerHTML = 'Xác nhận OTP'; btn.disabled = false;
+        if (!res.success) { document.getElementById('mail-otp-status').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>'; return; }
+        admMailToken = res.mailToken;
+        admMailTokenEventId = admCurrentEventId;
+        admMailCandidates = [];
+        document.getElementById('mail-otp-gate').classList.add('hidden');
+        document.getElementById('mail-compose-area').classList.remove('hidden');
+        admReloadMailCandidates();
+      })
+      .catch(function (err) {
+        btn.innerHTML = 'Xác nhận OTP'; btn.disabled = false;
+        document.getElementById('mail-otp-status').innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + err.message + '</span>';
+      });
+  }
+
+  function admInsertMailPlaceholder(token) {
+    if (admMailLastFocusTarget === 'subject') {
+      var el = document.getElementById('mail-subject');
+      var start = el.selectionStart == null ? el.value.length : el.selectionStart;
+      var end = el.selectionEnd == null ? el.value.length : el.selectionEnd;
+      el.value = el.value.slice(0, start) + token + el.value.slice(end);
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + token.length;
+    } else {
+      var body = document.getElementById('mail-body');
+      body.focus();
+      document.execCommand('insertText', false, token);
+    }
+  }
+
+  function admReloadMailCandidates() {
+    document.getElementById('mail-candidates-status').textContent = '⏳ Đang tải danh sách...';
+    callApi('adminGetMailCandidates', { eventId: admCurrentEventId, mailToken: admMailToken })
+      .then(function (res) {
+        if (!res.success) {
+          document.getElementById('mail-candidates-status').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>';
+          if (/OTP|hết hạn/i.test(res.error || '')) admMailLockTab();
+          return;
+        }
+        admMailCandidates = res.data.map(function (c) { return Object.assign({}, c, { selected: false, manualOverride: false }); });
+        document.getElementById('mail-candidates-status').innerHTML = res.coEmail ? '' :
+          '<span style="color:var(--danger)">Sự kiện này chưa khai báo cột Email ở tab "Cấu trúc dữ liệu" — không thể gửi mail.</span>';
+        admApplyMailFilters();
+      })
+      .catch(function (err) {
+        document.getElementById('mail-candidates-status').innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + err.message + '</span>';
+      });
+  }
+
+  // Bộ lọc chỉ đặt lại trạng thái CHỌN SẴN cho các dòng CHƯA từng bị tick/bỏ
+  // tick tay (manualOverride) — tránh việc chỉnh bộ lọc làm mất lựa chọn đặc
+  // biệt admin đã tự chỉnh trong bảng.
+  function admApplyMailFilters() {
+    var excludeConfirmed = document.getElementById('mf-exclude-confirmed').checked;
+    var excludeNotAttend = document.getElementById('mf-exclude-notattend').checked;
+    var excludeSurveyed = document.getElementById('mf-exclude-surveyed').checked;
+    admMailCandidates.forEach(function (c) {
+      if (c.manualOverride) return;
+      var sel = !!c.email;
+      if (sel && excludeConfirmed && c.daXacNhan) sel = false;
+      if (sel && excludeNotAttend && c.thamDu === false) sel = false;
+      if (sel && excludeSurveyed && c.daKhaoSat) sel = false;
+      c.selected = sel;
+    });
+    admRenderMailCandidatesTable();
+  }
+
+  function admRenderMailCandidatesTable() {
+    var selectedCount = 0, totalEmail = 0;
+    var rowsHtml = admMailCandidates.map(function (c, idx) {
+      if (c.email) totalEmail++;
+      if (c.selected) selectedCount++;
+      var badges = [];
+      badges.push(!c.daXacNhan ? 'Chưa phản hồi' : (c.thamDu ? 'Có tham dự' : 'Không tham dự'));
+      if (c.daKhaoSat) badges.push('Đã khảo sát');
+      if (!c.email) badges.push('Thiếu email');
+      return '<tr class="' + (c.selected ? '' : 'mail-row-excluded') + '">' +
+        '<td><input type="checkbox" class="mail-candidate-checkbox" ' + (c.selected ? 'checked' : '') + (c.email ? '' : ' disabled') +
+          ' onchange="admToggleMailRow(' + idx + ', this.checked)"></td>' +
+        '<td>' + admEsc_(c.msnv) + '</td>' +
+        '<td>' + admEsc_(c.hoTen) + '</td>' +
+        '<td>' + admEsc_(c.phongBan) + '</td>' +
+        '<td>' + (c.email ? admEsc_(c.email) : '<span style="color:var(--danger)">—</span>') + '</td>' +
+        '<td style="font-size:11px;color:var(--muted)">' + badges.join(' · ') + '</td>' +
+      '</tr>';
+    }).join('');
+    document.getElementById('mail-candidates-table').innerHTML =
+      '<tr><th></th><th>MSNV</th><th>Họ tên</th><th>Phòng ban</th><th>Email</th><th>Trạng thái</th></tr>' + rowsHtml;
+    document.getElementById('mail-select-summary').textContent =
+      'Đã chọn ' + selectedCount + ' / ' + admMailCandidates.length + ' người (có email: ' + totalEmail + ')';
+  }
+
+  function admToggleMailRow(idx, checked) {
+    admMailCandidates[idx].selected = checked;
+    admMailCandidates[idx].manualOverride = true;
+    admRenderMailCandidatesTable();
+  }
+
+  function admMailSelectAllVisible(flag) {
+    admMailCandidates.forEach(function (c) {
+      if (!c.email) return; // không có email thì luôn giữ bỏ chọn
+      c.selected = flag;
+      c.manualOverride = true;
+    });
+    admRenderMailCandidatesTable();
+  }
+
+  // Escape HTML tối thiểu khi render dữ liệu người vào bảng (Họ tên/Phòng ban
+  // đôi khi dính ký tự lạ nếu copy từ Excel) — tránh vỡ layout hoặc HTML injection.
+  function admEsc_(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function admSendTestMail() {
+    if (!admMailToken) { admMailLockTab(); return; }
+    var subject = document.getElementById('mail-subject').value.trim();
+    var html = document.getElementById('mail-body').innerHTML;
+    if (!subject || !html.trim()) {
+      document.getElementById('mail-test-status').innerHTML = '<span style="color:var(--danger)">Vui lòng nhập tiêu đề và nội dung trước.</span>';
+      return;
+    }
+    var btn = document.getElementById('mail-test-btn');
+    btn.innerHTML = '⏳ Đang gửi...'; btn.disabled = true;
+    callApi('adminSendTestMail', {
+      eventId: admCurrentEventId, mailToken: admMailToken,
+      payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL }
+    }).then(function (res) {
+      btn.innerHTML = '✉️ Gửi thử về email admin'; btn.disabled = false;
+      if (!res.success) {
+        document.getElementById('mail-test-status').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>';
+        if (/OTP|hết hạn/i.test(res.error || '')) admMailLockTab();
+        return;
+      }
+      document.getElementById('mail-test-status').innerHTML = '✅ Đã gửi thử về ' + res.sentTo + '.';
+    }).catch(function (err) {
+      btn.innerHTML = '✉️ Gửi thử về email admin'; btn.disabled = false;
+      document.getElementById('mail-test-status').innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + err.message + '</span>';
+    });
+  }
+
+  // Gửi thật, chia batch 80 người/lần gọi để tránh vượt giới hạn 6 phút thực
+  // thi của GAS — chạy tuần tự từng batch, cập nhật progress bar sau mỗi batch.
+  function admSendAllMail() {
+    if (admMailSending) return;
+    if (!admMailToken) { admMailLockTab(); return; }
+    var subject = document.getElementById('mail-subject').value.trim();
+    var html = document.getElementById('mail-body').innerHTML;
+    if (!subject || !html.trim()) {
+      document.getElementById('mail-send-result').innerHTML = '<span style="color:var(--danger)">Vui lòng nhập tiêu đề và nội dung trước.</span>';
+      return;
+    }
+    var selected = admMailCandidates.filter(function (c) { return c.selected && c.email; }).map(function (c) { return c.msnv; });
+    if (!selected.length) {
+      document.getElementById('mail-send-result').innerHTML = '<span style="color:var(--danger)">Chưa chọn người nhận nào (có email).</span>';
+      return;
+    }
+    if (!confirm('Xác nhận GỬI THẬT email cho ' + selected.length + ' người? Hành động này không thể thu hồi.')) return;
+
+    admMailSending = true;
+    var btn = document.getElementById('mail-send-btn');
+    btn.disabled = true; btn.innerHTML = '⏳ Đang gửi...';
+    document.getElementById('mail-send-result').innerHTML = '';
+    document.getElementById('mail-send-progress').classList.remove('hidden');
+    document.getElementById('mail-progress-fill').style.width = '0%';
+
+    var BATCH_SIZE = 80;
+    var batches = [];
+    for (var i = 0; i < selected.length; i += BATCH_SIZE) batches.push(selected.slice(i, i + BATCH_SIZE));
+    var totalSent = 0, totalFailed = 0, totalSkipped = 0, allResults = [];
+
+    function finishSending() {
+      admMailSending = false;
+      btn.disabled = false; btn.innerHTML = '📨 Gửi cho người đã chọn';
+      var failedRows = allResults.filter(function (r) { return r.status && r.status.indexOf('LỖI') === 0; });
+      var extra = failedRows.length ? ('<br>Người gửi lỗi: ' + failedRows.map(function (r) { return r.msnv; }).join(', ')) : '';
+      document.getElementById('mail-send-result').innerHTML = '✅ Đã gửi xong. ' + totalSent + ' thành công / ' + totalFailed + ' lỗi / ' + totalSkipped + ' bỏ qua (thiếu email).' + extra;
+    }
+
+    function runBatch(bi) {
+      if (bi >= batches.length) { finishSending(); return; }
+      document.getElementById('mail-progress-text').textContent =
+        'Đang gửi đợt ' + (bi + 1) + '/' + batches.length + ' (' + batches[bi].length + ' người)... đừng đóng tab.';
+      callApi('adminSendInvitationEmails', {
+        eventId: admCurrentEventId, mailToken: admMailToken,
+        payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL, msnvList: batches[bi] }
+      }).then(function (res) {
+        if (!res.success) {
+          document.getElementById('mail-send-result').innerHTML += '<br><span style="color:var(--danger)">❌ Đợt ' + (bi + 1) + ': ' + res.error + '</span>';
+          if (/OTP|hết hạn/i.test(res.error || '')) { admMailSending = false; btn.disabled = false; btn.innerHTML = '📨 Gửi cho người đã chọn'; admMailLockTab(); return; }
+        } else {
+          totalSent += res.sent; totalFailed += res.failed; totalSkipped += res.skipped;
+          allResults = allResults.concat(res.results || []);
+        }
+        document.getElementById('mail-progress-fill').style.width = Math.round(((bi + 1) / batches.length) * 100) + '%';
+        runBatch(bi + 1);
+      }).catch(function (err) {
+        document.getElementById('mail-send-result').innerHTML += '<br><span style="color:var(--danger)">❌ Lỗi kết nối đợt ' + (bi + 1) + ': ' + err.message + '</span>';
+        runBatch(bi + 1); // vẫn thử tiếp đợt sau, không dừng hẳn chỉ vì lỗi mạng tạm thời 1 đợt
+      });
+    }
+    runBatch(0);
+  }
+
+  function admLoadMailStats() {
+    if (!admMailToken) { admMailLockTab(); return; }
+    document.getElementById('mail-stats-result').textContent = '⏳ Đang tải...';
+    callApi('adminGetMailStats', { eventId: admCurrentEventId, mailToken: admMailToken })
+      .then(function (res) {
+        if (!res.success) {
+          document.getElementById('mail-stats-result').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>';
+          if (/OTP|hết hạn/i.test(res.error || '')) admMailLockTab();
+          return;
+        }
+        document.getElementById('mail-stats-result').textContent =
+          'Số người đã mở (ước tính): ' + res.uniqueOpens + ' · Tổng lượt mở: ' + res.totalOpens;
+      })
+      .catch(function (err) {
+        document.getElementById('mail-stats-result').innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + err.message + '</span>';
+      });
+  }
+
   function admDownloadQrSvg(inputId, filename) {
     var text = document.getElementById(inputId).value;
     if (!text) { admShowStatus('❌ QR chưa sẵn sàng, vui lòng thử lại.', false); return; }
@@ -1568,14 +1951,17 @@
     document.getElementById('tab-config').classList.toggle('active', t === 'config');
     document.getElementById('tab-columns').classList.toggle('active', t === 'columns');
     document.getElementById('tab-links').classList.toggle('active', t === 'links');
+    document.getElementById('tab-mail').classList.toggle('active', t === 'mail');
     document.getElementById('panel-newevent').classList.toggle('hidden', t !== 'newevent');
     document.getElementById('admin-content').classList.toggle('hidden', t === 'newevent' || admEVENTS.length === 0);
     document.getElementById('panel-questions').classList.toggle('hidden', t !== 'questions');
     document.getElementById('panel-config').classList.toggle('hidden', t !== 'config');
     document.getElementById('panel-columns').classList.toggle('hidden', t !== 'columns');
     document.getElementById('panel-links').classList.toggle('hidden', t !== 'links');
+    document.getElementById('panel-mail').classList.toggle('hidden', t !== 'mail');
     if (t === 'links') admRenderLinks();
     if (t === 'columns') admLoadColumnMap();
+    if (t === 'mail') admOpenMailTab();
   }
 
   function admSyncNewEventColor(key) {
@@ -1760,7 +2146,7 @@
   }
 
   function admSaveConfig() {
-    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu'];
+    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','AdminEmail','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu'];
     var payload = {};
     keys.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).value; });
     admRTE_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).innerHTML; });
