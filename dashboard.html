@@ -272,7 +272,7 @@
         <div class="card-title" style="margin-bottom:0">Danh sách chi tiết</div>
         <button class="btn btn-outline btn-sm" id="pending-export-btn" onclick="exportPendingRegistrations()">📥 Xuất Excel (chưa xác nhận)</button>
       </div>
-      <div class="search-wrap"><input class="search-input" id="search-input" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="applyFilter()"></div>
+      <div class="search-wrap"><input class="search-input" id="search-input" autocomplete="off" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="applyFilter()"></div>
       <div class="filter-row">
         <button class="filter-btn active" id="f-all" onclick="setFilter('all')">Tất cả</button>
         <button class="filter-btn" id="f-yes" onclick="setFilter('yes')">Tham dự</button>
@@ -313,7 +313,7 @@
       <div class="survey-gate">
         <p>🔒 Biểu đồ, danh sách chi tiết và báo cáo tổng kết khảo sát chỉ hiện sau khi nhập đúng Admin key.</p>
         <div class="survey-gate-row">
-          <input type="password" id="survey-gate-key" class="search-input" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') unlockSurveyDetail()">
+          <input type="password" id="survey-gate-key" class="search-input" autocomplete="off" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') unlockSurveyDetail()">
           <button class="btn btn-sm" id="survey-gate-btn" onclick="unlockSurveyDetail()">Mở khoá</button>
         </div>
         <div id="survey-gate-status" style="margin-top:10px"></div>
@@ -341,7 +341,7 @@
           <button class="filter-btn" id="ns-f-done" onclick="setNsFilter('done')">Đã khảo sát</button>
           <button class="filter-btn" id="ns-f-pending" onclick="setNsFilter('pending')">Chưa khảo sát</button>
         </div>
-        <div class="search-wrap"><input class="search-input" id="ns-search" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="renderNotSurveyed()"></div>
+        <div class="search-wrap"><input class="search-input" id="ns-search" autocomplete="off" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="renderNotSurveyed()"></div>
         <div id="ns-loading" class="empty-state hidden"><span class="spinner-lg"></span></div>
         <div class="table-wrap hidden" id="ns-table-wrap">
           <div class="ns-table-scroll">
@@ -378,7 +378,7 @@
 <div id="gate-screen" class="card" style="max-width:420px;margin:60px auto">
   <button class="back-to-landing" onclick="backToLanding()">← Về màn hình chính</button>
   <div class="card-title">Đăng nhập Admin</div>
-  <div class="field"><label>Admin key</label><input type="password" id="gate-key-input" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') admUnlockAdmin()"></div>
+  <div class="field"><label>Admin key</label><input type="password" id="gate-key-input" autocomplete="off" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') admUnlockAdmin()"></div>
   <button class="btn btn-primary btn-full" onclick="admUnlockAdmin()" id="gate-btn">Vào trang Admin</button>
   <div id="gate-status" style="margin-top:12px"></div>
 </div>
@@ -674,7 +674,7 @@
       <div id="mail-otp-sent-hint" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
       <div class="field" style="margin-top:14px;max-width:220px">
         <label>Nhập mã OTP (6 số)</label>
-        <input id="mail-otp-input" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter') admVerifyMailOtp()">
+        <input id="mail-otp-input" maxlength="6" autocomplete="off" placeholder="••••••" onkeydown="if(event.key==='Enter') admVerifyMailOtp()">
       </div>
       <button class="btn btn-primary btn-full" id="mail-otp-verify-btn" onclick="admVerifyMailOtp()">Xác nhận OTP</button>
       <p id="mail-otp-status" style="font-size:12px;margin-top:10px"></p>
@@ -1737,12 +1737,17 @@
   // gửi. LƯU Ý: việc tạo QR gọi ra 1 API công khai bên ngoài (api.qrserver.com),
   // nghĩa là link cá nhân hoá (chứa MSNV) sẽ được gửi sang bên thứ 3 đó.
   function admInsertMailQrPlaceholder() {
+    var bodyEl = document.getElementById('mail-body');
+    if (bodyEl.innerHTML.indexOf('{QRCode}') >= 0) {
+      alert('Nội dung hiện tại đã có 1 mã QR rồi (kể cả khi dùng "Chèn mẫu email đẹp có sẵn" — mẫu đó đã có sẵn QR). Xoá mã QR cũ trong ô nội dung trước nếu muốn chèn lại, tránh bị lặp 2 mã QR trong cùng 1 email.');
+      return;
+    }
     if (!confirm('Ảnh QR cá nhân hoá được tạo bằng cách gọi 1 API công khai bên ngoài (api.qrserver.com) — link đăng ký (có chứa mã nhân viên) sẽ được gửi sang bên thứ 3 đó để đổi lấy ảnh QR.\n\nBấm OK nếu anh/chị đồng ý dùng cách này.')) return;
     var body = document.getElementById('mail-body');
     body.focus();
     admMailLastFocusTarget = 'body';
-    var html = '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px auto"><tr><td align="center">' +
-      '<img src="{QRCode}" width="160" height="160" alt="QR đăng ký" style="display:block">' +
+    var html = '<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:12px auto"><tr><td align="center">' +
+      '<img src="{QRCode}" width="160" height="160" alt="QR đăng ký" style="display:block;margin:0 auto">' +
       '<div style="font-size:11px;color:#888;margin-top:4px">Quét mã để đăng ký nhanh</div>' +
       '</td></tr></table>';
     document.execCommand('insertHTML', false, html);
@@ -1796,10 +1801,17 @@
     return { html: container.innerHTML, attachments: attachments };
   }
 
-  // Mẫu email HTML dựng sẵn theo màu thương hiệu WinCommerce, bố cục bằng
-  // <table> (chuẩn tương thích tốt nhất cho email, thay vì <div>/CSS hiện đại
-  // dễ vỡ layout trên Outlook desktop). BTC chỉ cần sửa lại chữ cho đúng sự
-  // kiện, ảnh QR/logo có thể thay bằng ảnh chèn từ máy nếu muốn.
+  // Mẫu email HTML dựng sẵn theo màu thương hiệu WinCommerce. Dùng kỹ thuật
+  // "bulletproof" chuẩn cho email thay vì CSS hiện đại (Flexbox/margin:auto),
+  // vì nhiều mail client (kể cả Outlook Web, không chỉ Outlook desktop) đọc
+  // CSS không đầy đủ:
+  //   - Căn giữa bảng: dùng thuộc tính HTML align="center" TRÊN THẺ <table>,
+  //     không chỉ CSS margin:0 auto (nhiều client bỏ qua margin:auto trên table).
+  //   - Kích thước ảnh: dùng thuộc tính HTML width/height thật trên <img>,
+  //     không chỉ CSS max-height (nhiều client hiện ảnh đúng kích thước gốc
+  //     nếu CSS bị bỏ qua -> logo bị to bất thường như đã gặp).
+  //   - Màu nền: kèm cả thuộc tính HTML bgcolor lẫn CSS background, phòng khi
+  //     client chỉ đọc 1 trong 2.
   function admInsertBeautifulTemplate() {
     if (document.getElementById('mail-body').textContent.trim() &&
         !confirm('Nội dung đang soạn sẽ bị THAY THẾ hoàn toàn bằng mẫu có sẵn. Tiếp tục?')) return;
@@ -1807,34 +1819,34 @@
       || 'https://ops.winmart.vn/assets/img/logo/logo.png';
     var tenSuKien = (document.getElementById('cfg-TenSuKien') && document.getElementById('cfg-TenSuKien').value.trim()) || 'Sự kiện';
     var html =
-      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center">' +
-      '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px">' +
-        '<tr><td style="background:#E2231A;padding:32px 24px;text-align:center">' +
-          '<img src="' + logo + '" alt="' + tenSuKien + '" style="max-height:48px;margin-bottom:12px">' +
-          '<div style="color:#fff;font-size:22px;font-weight:bold">THƯ MỜI THAM DỰ SỰ KIỆN</div>' +
-        '</td></tr>' +
-        '<tr><td style="padding:32px 24px">' +
-          '<p style="font-size:16px;color:#222;margin:0 0 14px">Chào <b>{HoTen}</b>,</p>' +
-          '<p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 24px">Trân trọng kính mời bạn tham dự <b>' + tenSuKien + '</b>. Vui lòng bấm nút bên dưới để xác nhận tham dự — mỗi liên kết chỉ dành riêng cho bạn.</p>' +
-          '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px"><tr><td style="background:#E2231A;border-radius:8px">' +
-            '<a href="{LinkDangKy}" style="display:inline-block;padding:14px 32px;color:#fff;font-weight:bold;font-size:16px;text-decoration:none">XÁC NHẬN THAM DỰ</a>' +
-          '</td></tr></table>' +
-          '<p style="font-size:13px;color:#888;text-align:center;margin:0 0 8px">Hoặc quét mã QR bên dưới bằng điện thoại:</p>' +
-          '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto"><tr><td align="center">' +
-            '<img src="{QRCode}" width="160" height="160" alt="QR đăng ký" style="display:block">' +
-          '</td></tr></table>' +
-          '<p style="font-size:13px;color:#888;text-align:center;margin-top:24px">Mã nhân viên: {MSNV} · Phòng ban: {PhongBan}</p>' +
-        '</td></tr>' +
-        '<tr><td style="background:#f8f8f8;padding:16px 24px;text-align:center">' +
-          '<p style="font-size:11px;color:#aaa;margin:0">Email tự động từ hệ thống sự kiện nội bộ WinCommerce — vui lòng không trả lời email này.</p>' +
-        '</td></tr>' +
-      '</table>' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="background:#f4f4f4;font-family:Arial,Helvetica,sans-serif"><tr><td align="center" style="padding:24px 12px">' +
+        '<table role="presentation" width="600" cellpadding="0" cellspacing="0" align="center" bgcolor="#ffffff" style="background:#ffffff;border-radius:12px;max-width:600px;width:100%">' +
+          '<tr><td align="center" bgcolor="#E2231A" style="background:#E2231A;padding:32px 24px;border-radius:12px 12px 0 0">' +
+            '<img src="' + logo + '" alt="' + tenSuKien + '" width="140" style="display:block;width:140px;max-width:140px;height:auto;margin:0 auto 12px;border:0">' +
+            '<div style="color:#ffffff;font-size:22px;font-weight:bold;font-family:Arial,Helvetica,sans-serif">THƯ MỜI THAM DỰ SỰ KIỆN</div>' +
+          '</td></tr>' +
+          '<tr><td align="left" style="padding:32px 24px">' +
+            '<p style="font-size:16px;color:#222222;margin:0 0 14px;font-family:Arial,Helvetica,sans-serif">Chào <b>{HoTen}</b>,</p>' +
+            '<p style="font-size:15px;color:#444444;line-height:1.6;margin:0 0 24px;font-family:Arial,Helvetica,sans-serif">Trân trọng kính mời bạn tham dự <b>' + tenSuKien + '</b>. Vui lòng bấm nút bên dưới để xác nhận tham dự — mỗi liên kết chỉ dành riêng cho bạn.</p>' +
+            '<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 28px"><tr><td align="center" bgcolor="#E2231A" style="background:#E2231A;border-radius:8px">' +
+              '<a href="{LinkDangKy}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-weight:bold;font-size:16px;text-decoration:none;font-family:Arial,Helvetica,sans-serif">XÁC NHẬN THAM DỰ</a>' +
+            '</td></tr></table>' +
+            '<p align="center" style="font-size:13px;color:#888888;margin:0 0 8px;font-family:Arial,Helvetica,sans-serif">Hoặc quét mã QR bên dưới bằng điện thoại:</p>' +
+            '<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto"><tr><td align="center">' +
+              '<img src="{QRCode}" width="160" height="160" alt="QR đăng ký" style="display:block;width:160px;height:160px;margin:0 auto;border:0">' +
+            '</td></tr></table>' +
+            '<p align="center" style="font-size:13px;color:#888888;margin-top:24px;font-family:Arial,Helvetica,sans-serif">Mã nhân viên: {MSNV} · Phòng ban: {PhongBan}</p>' +
+          '</td></tr>' +
+          '<tr><td align="center" bgcolor="#f8f8f8" style="background:#f8f8f8;padding:16px 24px;border-radius:0 0 12px 12px">' +
+            '<p style="font-size:11px;color:#aaaaaa;margin:0;font-family:Arial,Helvetica,sans-serif">Email tự động từ hệ thống sự kiện nội bộ WinCommerce — vui lòng không trả lời email này.</p>' +
+          '</td></tr>' +
+        '</table>' +
       '</td></tr></table>';
     document.getElementById('mail-body').innerHTML = html;
     if (!document.getElementById('mail-subject').value.trim()) {
       document.getElementById('mail-subject').value = '[Thư mời] {HoTen} ơi, đăng ký tham dự ' + tenSuKien + ' nhé!';
     }
-    alert('Đã chèn mẫu email. Mẫu này dùng cả {QRCode} — nếu KHÔNG muốn gọi API QR bên ngoài, hãy xoá phần bảng chứa {QRCode} trong nội dung trước khi gửi.');
+    alert('Đã chèn mẫu email — mẫu này ĐÃ CÓ SẴN 1 mã QR bên trong. KHÔNG bấm thêm nút "📱 QR cá nhân hoá" nữa (sẽ bị lặp 2 mã QR). Nếu không muốn gọi API QR bên ngoài, hãy xoá phần bảng chứa {QRCode} trong nội dung trước khi gửi.');
   }
 
   function admInsertMailPlaceholder(token) {
