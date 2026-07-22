@@ -702,6 +702,10 @@
         <div class="field" style="margin-top:12px">
           <label>Chèn ảnh trực tiếp từ máy (nhúng vào thân mail — giống thao tác "Insert Pictures" của Outlook, không cần host ảnh ở đâu cả)</label>
           <input type="file" id="mail-inline-image-input" accept="image/*" style="display:none" onchange="admInsertInlineImage(this)">
+          <label class="toggle-row-sm" style="margin:6px 0 8px">
+            <input type="checkbox" id="mail-inline-image-link" checked>
+            <span>Bọc ảnh trong link cá nhân hoá (bấm vào ảnh sẽ đi tới link đăng ký riêng của người nhận)</span>
+          </label>
           <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mail-inline-image-input').click()">🖼️ Chọn ảnh từ máy...</button>
           <div class="colmap-hint" style="margin-top:4px">Bấm vào vị trí muốn chèn trong ô nội dung trước, rồi chọn ảnh. Ảnh gắn kiểu này hiển thị được trên MỌI Outlook (kể cả Outlook desktop) vì được đính kèm dạng inline attachment (Content-ID), không phải link ảnh ngoài. Nên dùng ảnh đã nén, dưới ~500KB để email không quá nặng.</div>
         </div>
@@ -748,6 +752,13 @@
           <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-surveyed" checked onchange="admApplyMailFilters()"><span>Loại trừ người đã khảo sát</span></label>
           <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-noemail" checked disabled><span>Tự động loại trừ người không có email</span></label>
         </div>
+        <div class="search-wrap" style="margin-top:10px"><input type="search" class="search-input" id="mail-candidates-search" name="mail-recipient-search" autocomplete="one-time-code" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="admRenderMailCandidatesTable()"></div>
+        <div class="filter-row" style="margin-top:10px">
+          <button class="filter-btn active" id="mfs-all" onclick="admSetMailStatusFilter('all')">Tất cả</button>
+          <button class="filter-btn" id="mfs-selected" onclick="admSetMailStatusFilter('selected')">Đã chọn</button>
+          <button class="filter-btn" id="mfs-unselected" onclick="admSetMailStatusFilter('unselected')">Chưa chọn</button>
+          <button class="filter-btn" id="mfs-noemail" onclick="admSetMailStatusFilter('noemail')">Thiếu email</button>
+        </div>
         <div style="display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="admReloadMailCandidates()">🔄 Tải lại danh sách</button>
           <button class="btn btn-outline btn-sm" onclick="admMailSelectAllVisible(true)">Chọn tất cả đang hiện</button>
@@ -762,7 +773,11 @@
 
       <div class="card">
         <div class="card-title">Gửi</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Hệ thống gửi theo từng đợt nhỏ (khoảng 80 người/đợt) để tránh vượt giới hạn thời gian chạy của Google Apps Script — quá trình gửi hàng trăm/nghìn người có thể mất vài phút, đừng đóng tab trong lúc gửi.</p>
+        <label class="toggle-row-sm">
+          <input type="checkbox" id="mail-shared-link">
+          <span>Dùng link đăng ký CHUNG cho mọi người (không cá nhân hoá theo MSNV) — người nhận sẽ tự nhập mã nhân viên khi vào trang đăng ký</span>
+        </label>
+        <p style="font-size:12px;color:var(--muted);margin:8px 0 12px">Hệ thống gửi theo từng đợt nhỏ (khoảng 80 người/đợt) để tránh vượt giới hạn thời gian chạy của Google Apps Script — quá trình gửi hàng trăm/nghìn người có thể mất vài phút, đừng đóng tab trong lúc gửi.</p>
         <button class="btn btn-primary btn-full" id="mail-send-btn" onclick="admSendAllMail()">📨 Gửi cho người đã chọn</button>
         <div id="mail-send-progress" class="hidden" style="margin-top:14px">
           <div class="mail-progress-track"><div class="mail-progress-fill" id="mail-progress-fill"></div></div>
@@ -1342,11 +1357,12 @@
 
   var admEVENTS = [];
   // ---- Trạng thái riêng cho tab "Gửi mail" ----
-  var admMailToken = '';           // cấp sau khi xác thực OTP đúng, sống 15 phút phía server, KHÔNG lưu localStorage
+  var admMailToken = '';           // cấp sau khi xác thực OTP đúng, sống 6 tiếng phía server (gần như cả phiên làm việc), KHÔNG lưu localStorage
   var admMailTokenEventId = '';    // mailToken chỉ hợp lệ cho đúng eventId đã xin lúc verify
   var admMailCandidates = [];      // toàn bộ danh sách nhận về từ adminGetMailCandidates
   var admMailExcluded = {};        // set các msnv bị bỏ chọn TAY (trường hợp đặc biệt), key = msnv gốc
   var admMailSending = false;
+  var admMailStatusFilter = 'all'; // 'all' | 'selected' | 'unselected' | 'noemail' — trạng thái chip lọc bảng người nhận
   var admCurrentEventId = null;
   var admADMIN_KEY_VALUE = ''; // nhập ở màn hình gate-screen, giữ trong biến JS suốt session tab này
   var questions = [];
@@ -1766,13 +1782,17 @@
       input.value = '';
       return;
     }
+    var wrapWithLink = document.getElementById('mail-inline-image-link').checked;
     var reader = new FileReader();
     reader.onload = function () {
       var body = document.getElementById('mail-body');
       body.focus();
       admMailLastFocusTarget = 'body';
       var cid = 'inlineimg_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-      var html = '<img src="' + reader.result + '" data-inline-cid="' + cid + '" alt="" style="max-width:100%;display:block"><br>';
+      var imgTag = '<img src="' + reader.result + '" data-inline-cid="' + cid + '" alt="" style="max-width:100%;display:block;border:0">';
+      var html = wrapWithLink
+        ? '<a href="{LinkDangKy}" target="_blank" style="text-decoration:none;border:0">' + imgTag + '</a><br>'
+        : imgTag + '<br>';
       document.execCommand('insertHTML', false, html);
       input.value = ''; // cho phép chọn lại cùng 1 file lần nữa nếu cần
     };
@@ -1866,6 +1886,13 @@
 
   function admReloadMailCandidates() {
     document.getElementById('mail-candidates-status').textContent = '⏳ Đang tải danh sách...';
+    var searchEl = document.getElementById('mail-candidates-search');
+    if (searchEl) searchEl.value = '';
+    admMailStatusFilter = 'all';
+    ['mfs-all', 'mfs-selected', 'mfs-unselected', 'mfs-noemail'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('active', id === 'mfs-all');
+    });
     callApi('adminGetMailCandidates', { eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE })
       .then(function (res) {
         if (!res.success) {
@@ -1901,11 +1928,44 @@
     admRenderMailCandidatesTable();
   }
 
+  // Trả về danh sách {c, idx} đã lọc theo ô tìm kiếm (tên/MSNV/phòng ban) và
+  // chip trạng thái đang chọn (admMailStatusFilter) — idx là chỉ số GỐC trong
+  // admMailCandidates, dùng để tick/bỏ tick đúng người dù bảng đang lọc.
+  function admGetFilteredMailCandidates() {
+    var q = (document.getElementById('mail-candidates-search').value || '').toLowerCase().trim();
+    return admMailCandidates
+      .map(function (c, idx) { return { c: c, idx: idx }; })
+      .filter(function (p) {
+        var c = p.c;
+        if (q) {
+          var hay = (c.msnv + ' ' + c.hoTen + ' ' + c.phongBan).toLowerCase();
+          if (hay.indexOf(q) < 0) return false;
+        }
+        if (admMailStatusFilter === 'selected' && !c.selected) return false;
+        if (admMailStatusFilter === 'unselected' && c.selected) return false;
+        if (admMailStatusFilter === 'noemail' && c.email) return false;
+        return true;
+      });
+  }
+
+  function admSetMailStatusFilter(val) {
+    admMailStatusFilter = val;
+    ['mfs-all', 'mfs-selected', 'mfs-unselected', 'mfs-noemail'].forEach(function (id) {
+      document.getElementById(id).classList.toggle('active', id === 'mfs-' + val);
+    });
+    admRenderMailCandidatesTable();
+  }
+
   function admRenderMailCandidatesTable() {
     var selectedCount = 0, totalEmail = 0;
-    var rowsHtml = admMailCandidates.map(function (c, idx) {
+    admMailCandidates.forEach(function (c) {
       if (c.email) totalEmail++;
       if (c.selected) selectedCount++;
+    });
+
+    var visible = admGetFilteredMailCandidates();
+    var rowsHtml = visible.map(function (p) {
+      var c = p.c, idx = p.idx;
       var badges = [];
       badges.push(!c.daXacNhan ? 'Chưa phản hồi' : (c.thamDu ? 'Có tham dự' : 'Không tham dự'));
       if (c.daKhaoSat) badges.push('Đã khảo sát');
@@ -1920,10 +1980,14 @@
         '<td style="font-size:11px;color:var(--muted)">' + badges.join(' · ') + '</td>' +
       '</tr>';
     }).join('');
-    document.getElementById('mail-candidates-table').innerHTML =
-      '<tr><th></th><th>MSNV</th><th>Họ tên</th><th>Phòng ban</th><th>Email</th><th>Trạng thái</th></tr>' + rowsHtml;
+
+    document.getElementById('mail-candidates-table').innerHTML = visible.length
+      ? '<tr><th></th><th>MSNV</th><th>Họ tên</th><th>Phòng ban</th><th>Email</th><th>Trạng thái</th></tr>' + rowsHtml
+      : '<tr><td style="padding:16px;text-align:center;color:var(--muted)">Không có ai khớp bộ lọc/tìm kiếm hiện tại.</td></tr>';
+
     document.getElementById('mail-select-summary').textContent =
-      'Đã chọn ' + selectedCount + ' / ' + admMailCandidates.length + ' người (có email: ' + totalEmail + ')';
+      'Đã chọn ' + selectedCount + ' / ' + admMailCandidates.length + ' người (có email: ' + totalEmail + ')' +
+      (visible.length !== admMailCandidates.length ? ' · đang hiện ' + visible.length : '');
   }
 
   function admToggleMailRow(idx, checked) {
@@ -1932,11 +1996,13 @@
     admRenderMailCandidatesTable();
   }
 
+  // Chỉ áp dụng cho các dòng ĐANG HIỆN sau khi lọc bởi tìm kiếm + chip trạng
+  // thái (admGetFilteredMailCandidates) — không đụng tới các dòng đang bị ẩn.
   function admMailSelectAllVisible(flag) {
-    admMailCandidates.forEach(function (c) {
-      if (!c.email) return; // không có email thì luôn giữ bỏ chọn
-      c.selected = flag;
-      c.manualOverride = true;
+    admGetFilteredMailCandidates().forEach(function (p) {
+      if (!p.c.email) return; // không có email thì luôn giữ bỏ chọn
+      p.c.selected = flag;
+      p.c.manualOverride = true;
     });
     admRenderMailCandidatesTable();
   }
@@ -1956,11 +2022,12 @@
       return;
     }
     var extracted = admExtractInlineAttachments(rawHtml); // tách ảnh chèn từ máy -> cid: attachment
+    var sharedLink = document.getElementById('mail-shared-link').checked;
     var btn = document.getElementById('mail-test-btn');
     btn.innerHTML = '⏳ Đang gửi...'; btn.disabled = true;
     callApi('adminSendTestMail', {
       eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE,
-      payload: { subjectTemplate: subject, htmlTemplate: extracted.html, frontendBaseUrl: admFRONTEND_BASE_URL, attachments: extracted.attachments }
+      payload: { subjectTemplate: subject, htmlTemplate: extracted.html, frontendBaseUrl: admFRONTEND_BASE_URL, attachments: extracted.attachments, sharedLink: sharedLink }
     }).then(function (res) {
       btn.innerHTML = '✉️ Gửi thử về email admin'; btn.disabled = false;
       if (!res.success) {
@@ -1988,12 +2055,13 @@
     }
     var extracted = admExtractInlineAttachments(rawHtml); // tách ảnh chèn từ máy -> cid: attachment (dùng chung mọi người nhận)
     var html = extracted.html;
+    var sharedLink = document.getElementById('mail-shared-link').checked;
     var selected = admMailCandidates.filter(function (c) { return c.selected && c.email; }).map(function (c) { return c.msnv; });
     if (!selected.length) {
       document.getElementById('mail-send-result').innerHTML = '<span style="color:var(--danger)">Chưa chọn người nhận nào (có email).</span>';
       return;
     }
-    if (!confirm('Xác nhận GỬI THẬT email cho ' + selected.length + ' người? Hành động này không thể thu hồi.')) return;
+    if (!confirm('Xác nhận GỬI THẬT email cho ' + selected.length + ' người' + (sharedLink ? ' (dùng LINK CHUNG, không cá nhân hoá)' : '') + '? Hành động này không thể thu hồi.')) return;
 
     admMailSending = true;
     var btn = document.getElementById('mail-send-btn');
@@ -2002,10 +2070,11 @@
     document.getElementById('mail-send-progress').classList.remove('hidden');
     document.getElementById('mail-progress-fill').style.width = '0%';
 
-    // Có {QRCode} -> mỗi người tốn thêm 1 lượt gọi API tạo QR bên ngoài, chậm
-    // hơn hẳn -> giảm số người/đợt để tránh vượt giới hạn 6 phút của GAS.
+    // Có {QRCode} VÀ dùng link cá nhân hoá -> mỗi người tốn thêm 1 lượt gọi
+    // API tạo QR riêng, chậm hơn hẳn -> giảm số người/đợt. Nếu dùng link
+    // CHUNG thì QR cũng chỉ tạo 1 lần cho cả đợt nên không cần giảm batch.
     var hasQr = html.indexOf('{QRCode}') >= 0;
-    var BATCH_SIZE = hasQr ? 30 : 80;
+    var BATCH_SIZE = (hasQr && !sharedLink) ? 30 : 80;
     var batches = [];
     for (var i = 0; i < selected.length; i += BATCH_SIZE) batches.push(selected.slice(i, i + BATCH_SIZE));
     var totalSent = 0, totalFailed = 0, totalSkipped = 0, allResults = [];
@@ -2024,7 +2093,7 @@
         'Đang gửi đợt ' + (bi + 1) + '/' + batches.length + ' (' + batches[bi].length + ' người)... đừng đóng tab.';
       callApi('adminSendInvitationEmails', {
         eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE,
-        payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL, msnvList: batches[bi], attachments: extracted.attachments }
+        payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL, msnvList: batches[bi], attachments: extracted.attachments, sharedLink: sharedLink }
       }).then(function (res) {
         if (!res.success) {
           document.getElementById('mail-send-result').innerHTML += '<br><span style="color:var(--danger)">❌ Đợt ' + (bi + 1) + ': ' + res.error + '</span>';
@@ -2343,7 +2412,8 @@
     setTimeout(function () {
       [
         ['search-input', applyFilter],
-        ['ns-search', renderNotSurveyed]
+        ['ns-search', renderNotSurveyed],
+        ['mail-candidates-search', admRenderMailCandidatesTable]
       ].forEach(function (pair) {
         var el = document.getElementById(pair[0]);
         if (el && el.value) {
