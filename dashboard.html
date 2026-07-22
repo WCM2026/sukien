@@ -272,7 +272,7 @@
         <div class="card-title" style="margin-bottom:0">Danh sách chi tiết</div>
         <button class="btn btn-outline btn-sm" id="pending-export-btn" onclick="exportPendingRegistrations()">📥 Xuất Excel (chưa xác nhận)</button>
       </div>
-      <div class="search-wrap"><input class="search-input" id="search-input" autocomplete="off" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="applyFilter()"></div>
+      <div class="search-wrap"><input type="search" class="search-input" id="search-input" name="ds-filter-text" autocomplete="one-time-code" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="applyFilter()"></div>
       <div class="filter-row">
         <button class="filter-btn active" id="f-all" onclick="setFilter('all')">Tất cả</button>
         <button class="filter-btn" id="f-yes" onclick="setFilter('yes')">Tham dự</button>
@@ -313,7 +313,7 @@
       <div class="survey-gate">
         <p>🔒 Biểu đồ, danh sách chi tiết và báo cáo tổng kết khảo sát chỉ hiện sau khi nhập đúng Admin key.</p>
         <div class="survey-gate-row">
-          <input type="password" id="survey-gate-key" class="search-input" autocomplete="off" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') unlockSurveyDetail()">
+          <input type="password" id="survey-gate-key" class="search-input" name="sv-gate-key" autocomplete="one-time-code" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') unlockSurveyDetail()">
           <button class="btn btn-sm" id="survey-gate-btn" onclick="unlockSurveyDetail()">Mở khoá</button>
         </div>
         <div id="survey-gate-status" style="margin-top:10px"></div>
@@ -341,7 +341,7 @@
           <button class="filter-btn" id="ns-f-done" onclick="setNsFilter('done')">Đã khảo sát</button>
           <button class="filter-btn" id="ns-f-pending" onclick="setNsFilter('pending')">Chưa khảo sát</button>
         </div>
-        <div class="search-wrap"><input class="search-input" id="ns-search" autocomplete="off" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="renderNotSurveyed()"></div>
+        <div class="search-wrap"><input type="search" class="search-input" id="ns-search" name="ns-filter-text" autocomplete="one-time-code" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="renderNotSurveyed()"></div>
         <div id="ns-loading" class="empty-state hidden"><span class="spinner-lg"></span></div>
         <div class="table-wrap hidden" id="ns-table-wrap">
           <div class="ns-table-scroll">
@@ -378,7 +378,7 @@
 <div id="gate-screen" class="card" style="max-width:420px;margin:60px auto">
   <button class="back-to-landing" onclick="backToLanding()">← Về màn hình chính</button>
   <div class="card-title">Đăng nhập Admin</div>
-  <div class="field"><label>Admin key</label><input type="password" id="gate-key-input" autocomplete="off" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') admUnlockAdmin()"></div>
+  <div class="field"><label>Admin key</label><input type="password" id="gate-key-input" name="adm-gate-key" autocomplete="one-time-code" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') admUnlockAdmin()"></div>
   <button class="btn btn-primary btn-full" onclick="admUnlockAdmin()" id="gate-btn">Vào trang Admin</button>
   <div id="gate-status" style="margin-top:12px"></div>
 </div>
@@ -674,7 +674,7 @@
       <div id="mail-otp-sent-hint" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
       <div class="field" style="margin-top:14px;max-width:220px">
         <label>Nhập mã OTP (6 số)</label>
-        <input id="mail-otp-input" maxlength="6" autocomplete="off" placeholder="••••••" onkeydown="if(event.key==='Enter') admVerifyMailOtp()">
+        <input id="mail-otp-input" maxlength="6" name="mail-otp" autocomplete="one-time-code" placeholder="••••••" onkeydown="if(event.key==='Enter') admVerifyMailOtp()">
       </div>
       <button class="btn btn-primary btn-full" id="mail-otp-verify-btn" onclick="admVerifyMailOtp()">Xác nhận OTP</button>
       <p id="mail-otp-status" style="font-size:12px;margin-top:10px"></p>
@@ -2331,6 +2331,32 @@
     // chế độ ban đầu.
     if (page === 'dashboard' && !dashboardLoaded) initDashboardEvents();
   }
+
+  // Lớp phòng ngừa cuối: 1 số trình duyệt (đặc biệt Chrome) vẫn có thể tự
+  // điền email/thông tin đã lưu vào các ô input dạng text ngay cả khi đã có
+  // type="search" + autocomplete khác "off", NHẤT LÀ khi trang không dùng
+  // thẻ <form> (khiến Chrome coi mọi input trên trang là 1 "biểu mẫu" ảo).
+  // Chủ động xoá trắng các ô tìm kiếm/nhập mã một lần ngay sau khi trang tải
+  // xong + autofill (nếu có) đã kịp chạy, rồi chạy lại đúng hàm lọc tương ứng
+  // để danh sách không bị lọc nhầm bởi giá trị tự điền.
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      [
+        ['search-input', applyFilter],
+        ['ns-search', renderNotSurveyed]
+      ].forEach(function (pair) {
+        var el = document.getElementById(pair[0]);
+        if (el && el.value) {
+          el.value = '';
+          if (typeof pair[1] === 'function') { try { pair[1](); } catch (e) {} }
+        }
+      });
+      ['gate-key-input', 'survey-gate-key', 'mail-otp-input'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && el.value) el.value = '';
+      });
+    }, 400); // đợi ngắn để autofill của trình duyệt (nếu có) kịp chạy trước khi mình xoá
+  });
 
 </script>
 </div>
