@@ -695,6 +695,24 @@
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{PhongBan}')">{PhongBan}</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{ChucDanh}')">{ChucDanh}</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{LinkDangKy}')">{LinkDangKy}</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailQrPlaceholder()">📱 QR cá nhân hoá</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertBeautifulTemplate()">✨ Chèn mẫu email đẹp có sẵn</button>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label>Chèn ảnh trực tiếp từ máy (nhúng vào thân mail — giống thao tác "Insert Pictures" của Outlook, không cần host ảnh ở đâu cả)</label>
+          <input type="file" id="mail-inline-image-input" accept="image/*" style="display:none" onchange="admInsertInlineImage(this)">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mail-inline-image-input').click()">🖼️ Chọn ảnh từ máy...</button>
+          <div class="colmap-hint" style="margin-top:4px">Bấm vào vị trí muốn chèn trong ô nội dung trước, rồi chọn ảnh. Ảnh gắn kiểu này hiển thị được trên MỌI Outlook (kể cả Outlook desktop) vì được đính kèm dạng inline attachment (Content-ID), không phải link ảnh ngoài. Nên dùng ảnh đã nén, dưới ~500KB để email không quá nặng.</div>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label>Hoặc dùng ảnh poster host sẵn ở URL ngoài (tuỳ chọn) — chèn vào đúng vị trí con trỏ đang đứng</label>
+          <div style="display:flex;gap:8px">
+            <input id="mail-poster-url" placeholder="https://.../poster.jpg (phải là link public — Drive dạng chia sẻ công khai hoặc host trên GitHub Pages)" style="flex:1">
+            <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPoster()" style="white-space:nowrap">🔗 Chèn ảnh + link cá nhân hoá</button>
+          </div>
+          <div class="colmap-hint" style="margin-top:4px">Ảnh được bọc trong link {LinkDangKy} — bấm vào ảnh sẽ đi thẳng tới link đăng ký riêng của người nhận. Cách này phụ thuộc ảnh còn tồn tại ở URL đó và nhiều mail client (Outlook) mặc định chặn tải ảnh ngoài cho tới khi người nhận bấm "Download pictures" — nếu cần ảnh CHẮC CHẮN hiện ngay, dùng ô "chèn ảnh từ máy" phía trên thay vì ô này.</div>
         </div>
         <div class="field" style="margin-top:12px">
           <label>Nội dung email</label>
@@ -1700,6 +1718,125 @@
       });
   }
 
+  function admInsertMailPoster() {
+    var urlInput = document.getElementById('mail-poster-url');
+    var url = urlInput.value.trim();
+    if (!url) { alert('Vui lòng nhập URL ảnh poster trước.'); urlInput.focus(); return; }
+    var body = document.getElementById('mail-body');
+    body.focus(); // khôi phục con trỏ về vị trí đang đứng trong ô nội dung (nếu trước đó đã click vào đó)
+    admMailLastFocusTarget = 'body';
+    var safeUrl = url.replace(/"/g, '&quot;');
+    var html = '<a href="{LinkDangKy}" target="_blank" style="text-decoration:none;border:0">' +
+      '<img src="' + safeUrl + '" alt="poster" style="max-width:100%;display:block;border:0">' +
+      '</a><br>';
+    document.execCommand('insertHTML', false, html);
+  }
+
+  // Chèn placeholder QR cá nhân hoá — {QRCode} sẽ được backend thay bằng ảnh
+  // QR RIÊNG cho từng người nhận (trỏ tới đúng link đăng ký của họ) ngay lúc
+  // gửi. LƯU Ý: việc tạo QR gọi ra 1 API công khai bên ngoài (api.qrserver.com),
+  // nghĩa là link cá nhân hoá (chứa MSNV) sẽ được gửi sang bên thứ 3 đó.
+  function admInsertMailQrPlaceholder() {
+    if (!confirm('Ảnh QR cá nhân hoá được tạo bằng cách gọi 1 API công khai bên ngoài (api.qrserver.com) — link đăng ký (có chứa mã nhân viên) sẽ được gửi sang bên thứ 3 đó để đổi lấy ảnh QR.\n\nBấm OK nếu anh/chị đồng ý dùng cách này.')) return;
+    var body = document.getElementById('mail-body');
+    body.focus();
+    admMailLastFocusTarget = 'body';
+    var html = '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px auto"><tr><td align="center">' +
+      '<img src="{QRCode}" width="160" height="160" alt="QR đăng ký" style="display:block">' +
+      '<div style="font-size:11px;color:#888;margin-top:4px">Quét mã để đăng ký nhanh</div>' +
+      '</td></tr></table>';
+    document.execCommand('insertHTML', false, html);
+  }
+
+  // Đọc ảnh từ máy, nhúng thẳng vào ô soạn dạng data: URI (chỉ để XEM TRƯỚC
+  // trong trình soạn thảo) kèm data-inline-cid — lúc gửi thật,
+  // admExtractInlineAttachments() sẽ tách các ảnh này ra thành file đính kèm
+  // inline (Content-ID) và đổi src sang "cid:..." trước khi gọi API, vì
+  // Outlook desktop KHÔNG hiển thị được <img src="data:..."> nhúng thẳng.
+  function admInsertInlineImage(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      alert('Ảnh quá lớn (>3MB) — vui lòng nén ảnh nhỏ hơn trước khi chèn, tránh email bị chặn vì quá nặng.');
+      input.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var body = document.getElementById('mail-body');
+      body.focus();
+      admMailLastFocusTarget = 'body';
+      var cid = 'inlineimg_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+      var html = '<img src="' + reader.result + '" data-inline-cid="' + cid + '" alt="" style="max-width:100%;display:block"><br>';
+      document.execCommand('insertHTML', false, html);
+      input.value = ''; // cho phép chọn lại cùng 1 file lần nữa nếu cần
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Quét HTML soạn thảo, tách các <img src="data:..."> thành attachment inline
+  // (contentId/contentType/base64) và đổi src trong HTML sang "cid:...". Trả
+  // về { html, attachments } — dùng ngay trước khi gửi (test hoặc gửi thật).
+  function admExtractInlineAttachments(html) {
+    var container = document.createElement('div');
+    container.innerHTML = html;
+    var attachments = [];
+    var seen = {};
+    container.querySelectorAll('img[src^="data:"]').forEach(function (img, idx) {
+      var m = /^data:([^;]+);base64,(.+)$/.exec(img.getAttribute('src') || '');
+      if (!m) return;
+      var cid = img.getAttribute('data-inline-cid') || ('inlineimg_' + idx + '_' + Date.now());
+      if (!seen[cid]) {
+        seen[cid] = true;
+        attachments.push({ contentId: cid, contentType: m[1], base64: m[2] });
+      }
+      img.setAttribute('src', 'cid:' + cid);
+      img.removeAttribute('data-inline-cid');
+    });
+    return { html: container.innerHTML, attachments: attachments };
+  }
+
+  // Mẫu email HTML dựng sẵn theo màu thương hiệu WinCommerce, bố cục bằng
+  // <table> (chuẩn tương thích tốt nhất cho email, thay vì <div>/CSS hiện đại
+  // dễ vỡ layout trên Outlook desktop). BTC chỉ cần sửa lại chữ cho đúng sự
+  // kiện, ảnh QR/logo có thể thay bằng ảnh chèn từ máy nếu muốn.
+  function admInsertBeautifulTemplate() {
+    if (document.getElementById('mail-body').textContent.trim() &&
+        !confirm('Nội dung đang soạn sẽ bị THAY THẾ hoàn toàn bằng mẫu có sẵn. Tiếp tục?')) return;
+    var logo = (document.getElementById('cfg-Logo') && document.getElementById('cfg-Logo').value.trim())
+      || 'https://ops.winmart.vn/assets/img/logo/logo.png';
+    var tenSuKien = (document.getElementById('cfg-TenSuKien') && document.getElementById('cfg-TenSuKien').value.trim()) || 'Sự kiện';
+    var html =
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0;font-family:Arial,Helvetica,sans-serif"><tr><td align="center">' +
+      '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px">' +
+        '<tr><td style="background:#E2231A;padding:32px 24px;text-align:center">' +
+          '<img src="' + logo + '" alt="' + tenSuKien + '" style="max-height:48px;margin-bottom:12px">' +
+          '<div style="color:#fff;font-size:22px;font-weight:bold">THƯ MỜI THAM DỰ SỰ KIỆN</div>' +
+        '</td></tr>' +
+        '<tr><td style="padding:32px 24px">' +
+          '<p style="font-size:16px;color:#222;margin:0 0 14px">Chào <b>{HoTen}</b>,</p>' +
+          '<p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 24px">Trân trọng kính mời bạn tham dự <b>' + tenSuKien + '</b>. Vui lòng bấm nút bên dưới để xác nhận tham dự — mỗi liên kết chỉ dành riêng cho bạn.</p>' +
+          '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px"><tr><td style="background:#E2231A;border-radius:8px">' +
+            '<a href="{LinkDangKy}" style="display:inline-block;padding:14px 32px;color:#fff;font-weight:bold;font-size:16px;text-decoration:none">XÁC NHẬN THAM DỰ</a>' +
+          '</td></tr></table>' +
+          '<p style="font-size:13px;color:#888;text-align:center;margin:0 0 8px">Hoặc quét mã QR bên dưới bằng điện thoại:</p>' +
+          '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto"><tr><td align="center">' +
+            '<img src="{QRCode}" width="160" height="160" alt="QR đăng ký" style="display:block">' +
+          '</td></tr></table>' +
+          '<p style="font-size:13px;color:#888;text-align:center;margin-top:24px">Mã nhân viên: {MSNV} · Phòng ban: {PhongBan}</p>' +
+        '</td></tr>' +
+        '<tr><td style="background:#f8f8f8;padding:16px 24px;text-align:center">' +
+          '<p style="font-size:11px;color:#aaa;margin:0">Email tự động từ hệ thống sự kiện nội bộ WinCommerce — vui lòng không trả lời email này.</p>' +
+        '</td></tr>' +
+      '</table>' +
+      '</td></tr></table>';
+    document.getElementById('mail-body').innerHTML = html;
+    if (!document.getElementById('mail-subject').value.trim()) {
+      document.getElementById('mail-subject').value = '[Thư mời] {HoTen} ơi, đăng ký tham dự ' + tenSuKien + ' nhé!';
+    }
+    alert('Đã chèn mẫu email. Mẫu này dùng cả {QRCode} — nếu KHÔNG muốn gọi API QR bên ngoài, hãy xoá phần bảng chứa {QRCode} trong nội dung trước khi gửi.');
+  }
+
   function admInsertMailPlaceholder(token) {
     if (admMailLastFocusTarget === 'subject') {
       var el = document.getElementById('mail-subject');
@@ -1717,7 +1854,7 @@
 
   function admReloadMailCandidates() {
     document.getElementById('mail-candidates-status').textContent = '⏳ Đang tải danh sách...';
-    callApi('adminGetMailCandidates', { eventId: admCurrentEventId, mailToken: admMailToken })
+    callApi('adminGetMailCandidates', { eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE })
       .then(function (res) {
         if (!res.success) {
           document.getElementById('mail-candidates-status').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>';
@@ -1801,16 +1938,17 @@
   function admSendTestMail() {
     if (!admMailToken) { admMailLockTab(); return; }
     var subject = document.getElementById('mail-subject').value.trim();
-    var html = document.getElementById('mail-body').innerHTML;
-    if (!subject || !html.trim()) {
+    var rawHtml = document.getElementById('mail-body').innerHTML;
+    if (!subject || !rawHtml.trim()) {
       document.getElementById('mail-test-status').innerHTML = '<span style="color:var(--danger)">Vui lòng nhập tiêu đề và nội dung trước.</span>';
       return;
     }
+    var extracted = admExtractInlineAttachments(rawHtml); // tách ảnh chèn từ máy -> cid: attachment
     var btn = document.getElementById('mail-test-btn');
     btn.innerHTML = '⏳ Đang gửi...'; btn.disabled = true;
     callApi('adminSendTestMail', {
-      eventId: admCurrentEventId, mailToken: admMailToken,
-      payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL }
+      eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE,
+      payload: { subjectTemplate: subject, htmlTemplate: extracted.html, frontendBaseUrl: admFRONTEND_BASE_URL, attachments: extracted.attachments }
     }).then(function (res) {
       btn.innerHTML = '✉️ Gửi thử về email admin'; btn.disabled = false;
       if (!res.success) {
@@ -1831,11 +1969,13 @@
     if (admMailSending) return;
     if (!admMailToken) { admMailLockTab(); return; }
     var subject = document.getElementById('mail-subject').value.trim();
-    var html = document.getElementById('mail-body').innerHTML;
-    if (!subject || !html.trim()) {
+    var rawHtml = document.getElementById('mail-body').innerHTML;
+    if (!subject || !rawHtml.trim()) {
       document.getElementById('mail-send-result').innerHTML = '<span style="color:var(--danger)">Vui lòng nhập tiêu đề và nội dung trước.</span>';
       return;
     }
+    var extracted = admExtractInlineAttachments(rawHtml); // tách ảnh chèn từ máy -> cid: attachment (dùng chung mọi người nhận)
+    var html = extracted.html;
     var selected = admMailCandidates.filter(function (c) { return c.selected && c.email; }).map(function (c) { return c.msnv; });
     if (!selected.length) {
       document.getElementById('mail-send-result').innerHTML = '<span style="color:var(--danger)">Chưa chọn người nhận nào (có email).</span>';
@@ -1850,7 +1990,10 @@
     document.getElementById('mail-send-progress').classList.remove('hidden');
     document.getElementById('mail-progress-fill').style.width = '0%';
 
-    var BATCH_SIZE = 80;
+    // Có {QRCode} -> mỗi người tốn thêm 1 lượt gọi API tạo QR bên ngoài, chậm
+    // hơn hẳn -> giảm số người/đợt để tránh vượt giới hạn 6 phút của GAS.
+    var hasQr = html.indexOf('{QRCode}') >= 0;
+    var BATCH_SIZE = hasQr ? 30 : 80;
     var batches = [];
     for (var i = 0; i < selected.length; i += BATCH_SIZE) batches.push(selected.slice(i, i + BATCH_SIZE));
     var totalSent = 0, totalFailed = 0, totalSkipped = 0, allResults = [];
@@ -1868,8 +2011,8 @@
       document.getElementById('mail-progress-text').textContent =
         'Đang gửi đợt ' + (bi + 1) + '/' + batches.length + ' (' + batches[bi].length + ' người)... đừng đóng tab.';
       callApi('adminSendInvitationEmails', {
-        eventId: admCurrentEventId, mailToken: admMailToken,
-        payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL, msnvList: batches[bi] }
+        eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE,
+        payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL, msnvList: batches[bi], attachments: extracted.attachments }
       }).then(function (res) {
         if (!res.success) {
           document.getElementById('mail-send-result').innerHTML += '<br><span style="color:var(--danger)">❌ Đợt ' + (bi + 1) + ': ' + res.error + '</span>';
@@ -1891,7 +2034,7 @@
   function admLoadMailStats() {
     if (!admMailToken) { admMailLockTab(); return; }
     document.getElementById('mail-stats-result').textContent = '⏳ Đang tải...';
-    callApi('adminGetMailStats', { eventId: admCurrentEventId, mailToken: admMailToken })
+    callApi('adminGetMailStats', { eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE })
       .then(function (res) {
         if (!res.success) {
           document.getElementById('mail-stats-result').innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>';
