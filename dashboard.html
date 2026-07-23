@@ -20,7 +20,8 @@
   .page-center{width:100%;max-width:780px;margin:0 auto}
 
   .header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:16px}
-  .header h1{font-size:21px;font-weight:800}
+  .header h1{font-size:30px;font-weight:800;line-height:1.15}
+  .dash-kicker{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin:0 0 2px}
   .header p{color:var(--muted);font-size:13px;margin-top:4px}
 
   .event-select{padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;background:white;min-width:220px;outline:none}
@@ -250,7 +251,8 @@
 <button class="back-to-landing" onclick="backToLanding()">← Về màn hình chính</button>
 <div class="header">
   <div>
-    <h1>Dashboard tổng hợp</h1>
+    <p class="dash-kicker">Dashboard tổng hợp</p>
+    <h1 id="dash-event-title">Đang tải...</h1>
     <p id="dash-sub">Chọn sự kiện để xem số liệu đăng ký và khảo sát</p>
   </div>
   <select class="event-select" id="event-select" onchange="onEventChange()"><option>Đang tải danh sách sự kiện...</option></select>
@@ -880,7 +882,10 @@
   // ---------------------------------------------------------------------
   function enterMode(mode) {
     document.getElementById('landing-screen').classList.add('hidden');
-    document.getElementById('page-switch-bar').classList.remove('hidden');
+    // Chỉ hiện thanh chuyển "Dashboard | Admin" khi đã xác thực admin (hoặc
+    // đang vào chính tab Admin) — người xem Dashboard công khai (chưa nhập
+    // admin key) không cần thấy/biết có khu vực Admin để bấm vào.
+    document.getElementById('page-switch-bar').classList.toggle('hidden', !(mode === 'admin' || admADMIN_KEY_VALUE));
     goToPage(mode);
     if (mode === 'dashboard' && !dashboardLoaded) initDashboardEvents();
   }
@@ -963,6 +968,7 @@
   function onEventsLoaded(res) {
     if (!res.success || !res.data.length) {
       document.getElementById('event-select').innerHTML = '<option>Không có sự kiện</option>';
+      document.getElementById('dash-event-title').textContent = '';
       document.getElementById('no-event-state').classList.remove('hidden');
       return;
     }
@@ -974,6 +980,7 @@
     var sel = document.getElementById('event-select');
     sel.innerHTML = EVENTS.map(function (ev) { return '<option value="' + ev.EventId + '">' + ev.TenSuKien + '</option>'; }).join('');
     currentEventId = EVENTS[0].EventId;
+    document.getElementById('dash-event-title').textContent = EVENTS[0].TenSuKien || '';
     document.getElementById('dashboard-content').classList.remove('hidden');
     document.getElementById('no-event-state').classList.add('hidden');
     document.getElementById('dash-sub').textContent = res.isAdmin ?
@@ -999,6 +1006,8 @@
 
   function onEventChange() {
     currentEventId = document.getElementById('event-select').value;
+    var ev = EVENTS.filter(function (e) { return e.EventId === currentEventId; })[0];
+    document.getElementById('dash-event-title').textContent = ev ? (ev.TenSuKien || '') : '';
     surveyRaw = null;
     attendeesRaw = [];
     loadRegisterData();
