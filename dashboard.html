@@ -668,7 +668,7 @@
          sống trong biến JS, không lưu localStorage) -->
     <div id="mail-otp-gate" class="card">
       <div class="card-title">Xác thực để mở tab Gửi mail</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Vì đây là chức năng gửi email thật nhân danh công ty, ngoài admin key còn cần thêm mã OTP gửi về 1 email admin đã được duyệt trước cho sự kiện này. Danh sách email được phép nhận OTP quản lý trực tiếp trong tab <b>"AdminEmail"</b> của Google Sheet sự kiện này (cột A, mỗi dòng 1 email) — web app chỉ đọc để hiện vào danh sách chọn bên dưới, không sửa được từ đây.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Vì đây là chức năng gửi email thật nhân danh công ty, ngoài admin key còn cần thêm mã OTP gửi về 1 email admin đã được duyệt trước. Danh sách email được phép nhận OTP quản lý trực tiếp trong tab <b>"AdminEmail"</b> của <b>Master Sheet</b> (BTC - Master Events, cùng chỗ tab "Events") — dùng chung cho mọi sự kiện, cột A mỗi dòng 1 email — web app chỉ đọc để hiện vào danh sách chọn bên dưới, không sửa được từ đây.</p>
 
       <div class="field">
         <label>Gửi mã OTP tới</label>
@@ -676,7 +676,7 @@
           <select id="mail-otp-email-select" style="flex:1"><option value="">Đang tải danh sách...</option></select>
           <button type="button" class="btn btn-outline btn-sm" onclick="admLoadAdminMailList()" title="Tải lại danh sách từ sheet">🔄</button>
         </div>
-        <div class="colmap-hint" style="margin-top:4px">Không thấy email cần dùng? Vào tab "AdminEmail" trong Google Sheet của sự kiện để thêm, rồi bấm nút 🔄 tải lại.</div>
+        <div class="colmap-hint" style="margin-top:4px">Không thấy email cần dùng? Vào tab "AdminEmail" trong Master Sheet (BTC - Master Events) để thêm, rồi bấm nút 🔄 tải lại.</div>
       </div>
 
       <button class="btn btn-outline btn-sm" id="mail-otp-request-btn" onclick="admRequestMailOtp()" style="margin-top:6px" disabled>📩 Gửi mã OTP</button>
