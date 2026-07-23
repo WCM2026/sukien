@@ -213,18 +213,30 @@
 
 <div id="landing-screen" class="landing-overlay">
   <div class="landing-card">
-    <div class="landing-icon">🏆</div>
-    <h1>Quản lý sự kiện WinCommerce</h1>
-    <p class="landing-sub">Chọn chế độ bạn muốn vào</p>
-    <div class="landing-choices">
+    <div id="landing-header-block">
+      <div class="landing-icon">🏆</div>
+      <h1>Quản lý sự kiện WinCommerce</h1>
+      <p class="landing-sub" id="landing-sub-text">Chọn chế độ bạn muốn vào</p>
+    </div>
+    <div class="landing-choices" id="landing-choices">
       <button class="landing-btn" onclick="enterMode('dashboard')">
         <span class="lb-icon">📊</span>
         <span class="lb-title">Xem Dashboard</span>
       </button>
-      <button class="landing-btn" onclick="enterMode('admin')">
+      <button class="landing-btn" onclick="admOnLandingAdminClick()">
         <span class="lb-icon">⚙️</span>
         <span class="lb-title">Admin</span>
       </button>
+    </div>
+
+    <!-- Nhập admin key NGAY tại Landing, trước khi vào tab Admin (thay vì
+         nhập sau khi đã vào bên trong) — xác thực thật vẫn diễn ra ở server
+         qua adminPing, y hệt cơ chế cũ. -->
+    <div id="landing-admin-gate" class="hidden" style="text-align:left">
+      <button class="back-to-landing" onclick="admHideLandingGate()">← Quay lại</button>
+      <div class="field"><label>Admin key</label><input type="password" id="landing-gate-key" name="landing-gate-key" autocomplete="one-time-code" placeholder="Nhập admin key" onkeydown="if(event.key==='Enter') admLandingUnlockAdmin()"></div>
+      <button class="btn btn-primary btn-full" onclick="admLandingUnlockAdmin()" id="landing-gate-btn">Vào trang Admin</button>
+      <div id="landing-gate-status" style="margin-top:12px"></div>
     </div>
   </div>
 </div>
@@ -878,6 +890,64 @@
     document.getElementById('page-switch-bar').classList.add('hidden');
     document.getElementById('view-dashboard').classList.add('hidden');
     document.getElementById('view-admin').classList.add('hidden');
+    admHideLandingGate(); // luôn về đúng màn hình chọn chế độ, không kẹt ở form nhập key còn dở
+  }
+
+  // Bấm "Admin" ở Landing: nếu phiên này đã xác thực rồi (VD unlock qua cổng
+  // trong tab Admin ở lượt trước) thì vào thẳng, không hỏi lại; chưa thì hiện
+  // form nhập key ngay tại Landing (thay vì phải vào tab Admin mới thấy).
+  function admOnLandingAdminClick() {
+    if (admADMIN_KEY_VALUE) {
+      enterMode('admin');
+      return;
+    }
+    document.getElementById('landing-choices').classList.add('hidden');
+    document.getElementById('landing-header-block').classList.add('hidden');
+    document.getElementById('landing-admin-gate').classList.remove('hidden');
+    document.getElementById('landing-gate-key').value = '';
+    document.getElementById('landing-gate-status').innerHTML = '';
+    document.getElementById('landing-gate-key').focus();
+  }
+
+  function admHideLandingGate() {
+    document.getElementById('landing-admin-gate').classList.add('hidden');
+    document.getElementById('landing-choices').classList.remove('hidden');
+    document.getElementById('landing-header-block').classList.remove('hidden');
+  }
+
+  // Xác thực admin key NGAY tại Landing — gọi cùng action 'adminPing' y hệt
+  // cổng khoá cũ trong tab Admin (xác thực thật vẫn ở server). Thành công thì
+  // coi như đã unlock, bỏ qua luôn cổng khoá nội bộ (gate-screen) khi vào tab
+  // Admin, tránh phải nhập key 2 lần.
+  function admLandingUnlockAdmin() {
+    var key = document.getElementById('landing-gate-key').value;
+    if (!key) {
+      document.getElementById('landing-gate-status').innerHTML = '<div class="status-banner status-err">Vui lòng nhập admin key.</div>';
+      return;
+    }
+    var btn = document.getElementById('landing-gate-btn');
+    btn.innerHTML = 'Đang kiểm tra...'; btn.disabled = true;
+    callApi('adminPing', { adminKey: key }).then(function (res) {
+      btn.innerHTML = 'Vào trang Admin'; btn.disabled = false;
+      if (!res.success) {
+        document.getElementById('landing-gate-status').innerHTML = '<div class="status-banner status-err">❌ ' + (res.error || 'Sai admin key.') + '</div>';
+        return;
+      }
+      admADMIN_KEY_VALUE = key;
+      // Chia sẻ key này với Dashboard: nhờ vậy khi tự động chuyển sang tab
+      // "📊 Dashboard" sau này, họ có "full quyền" — thấy mọi sự kiện (kể cả
+      // sự kiện chưa bật công khai) và mở khoá luôn chi tiết khảo sát.
+      sharedAdminKey = key;
+      dashboardLoaded = false; // buộc Dashboard tải lại với quyền admin
+      // Đã xác thực ngay tại Landing rồi -> bỏ qua luôn cổng khoá nội bộ trong tab Admin
+      document.getElementById('gate-screen').classList.add('hidden');
+      document.getElementById('admin-root').classList.remove('hidden');
+      admInitAdminPage();
+      enterMode('admin');
+    }).catch(function (err) {
+      btn.innerHTML = 'Vào trang Admin'; btn.disabled = false;
+      document.getElementById('landing-gate-status').innerHTML = '<div class="status-banner status-err">❌ Lỗi kết nối: ' + err.message + '</div>';
+    });
   }
 
   function initDashboardEvents() {
