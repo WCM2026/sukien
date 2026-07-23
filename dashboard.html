@@ -668,24 +668,18 @@
          sống trong biến JS, không lưu localStorage) -->
     <div id="mail-otp-gate" class="card">
       <div class="card-title">Xác thực để mở tab Gửi mail</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Vì đây là chức năng gửi email thật nhân danh công ty, ngoài admin key còn cần thêm mã OTP gửi về 1 email admin đã được duyệt trước cho sự kiện này.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Vì đây là chức năng gửi email thật nhân danh công ty, ngoài admin key còn cần thêm mã OTP gửi về 1 email admin đã được duyệt trước cho sự kiện này. Danh sách email được phép nhận OTP quản lý trực tiếp trong tab <b>"AdminEmail"</b> của Google Sheet sự kiện này (cột A, mỗi dòng 1 email) — web app chỉ đọc để hiện vào danh sách chọn bên dưới, không sửa được từ đây.</p>
 
       <div class="field">
         <label>Gửi mã OTP tới</label>
-        <select id="mail-otp-email-select"><option value="">Đang tải danh sách...</option></select>
-      </div>
-      <button type="button" class="btn btn-outline btn-sm" onclick="admToggleAdminMailManage()">✏️ Quản lý danh sách email admin</button>
-
-      <div id="mail-admin-list-manage" class="hidden" style="margin-top:12px;padding:12px;background:var(--bg);border-radius:8px">
-        <div class="field">
-          <label>Danh sách email được phép nhận OTP của sự kiện này (mỗi dòng 1 email)</label>
-          <textarea id="mail-admin-list-textarea" rows="4" style="width:100%;font-family:monospace;font-size:13px;padding:10px;border:1.5px solid var(--border);border-radius:8px;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px">
+          <select id="mail-otp-email-select" style="flex:1"><option value="">Đang tải danh sách...</option></select>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admLoadAdminMailList()" title="Tải lại danh sách từ sheet">🔄</button>
         </div>
-        <button type="button" class="btn btn-outline btn-sm" onclick="admSaveAdminMailList()">💾 Lưu danh sách</button>
-        <p id="mail-admin-list-status" style="font-size:12px;margin-top:6px"></p>
+        <div class="colmap-hint" style="margin-top:4px">Không thấy email cần dùng? Vào tab "AdminEmail" trong Google Sheet của sự kiện để thêm, rồi bấm nút 🔄 tải lại.</div>
       </div>
 
-      <button class="btn btn-outline btn-sm" id="mail-otp-request-btn" onclick="admRequestMailOtp()" style="margin-top:14px" disabled>📩 Gửi mã OTP</button>
+      <button class="btn btn-outline btn-sm" id="mail-otp-request-btn" onclick="admRequestMailOtp()" style="margin-top:6px" disabled>📩 Gửi mã OTP</button>
       <div id="mail-otp-sent-hint" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
       <div class="field" style="margin-top:14px;max-width:220px">
         <label>Nhập mã OTP (6 số)</label>
@@ -1378,7 +1372,7 @@
   var admMailExcluded = {};        // set các msnv bị bỏ chọn TAY (trường hợp đặc biệt), key = msnv gốc
   var admMailSending = false;
   var admMailStatusFilter = 'all'; // 'all' | 'selected' | 'unselected' | 'noemail' — trạng thái chip lọc bảng người nhận
-  var admAdminMailEmails = []; // danh sách email admin được duyệt nhận OTP của sự kiện đang chọn (tab sheet "AdminMail")
+  var admAdminMailEmails = []; // danh sách email admin được duyệt nhận OTP của sự kiện đang chọn (tab sheet "AdminEmail")
   var admCurrentEventId = null;
   var admADMIN_KEY_VALUE = ''; // nhập ở màn hình gate-screen, giữ trong biến JS suốt session tab này
   var questions = [];
@@ -1713,9 +1707,9 @@
     document.getElementById('mail-otp-sent-hint').textContent = '';
   }
 
-  // Tải danh sách email admin được duyệt (whitelist riêng theo sự kiện, lưu ở
-  // tab sheet "AdminMail") để đổ vào <select> chọn nơi nhận OTP, đồng thời đổ
-  // vào ô textarea quản lý danh sách (ẩn mặc định, bấm "Quản lý" mới hiện).
+  // Tải danh sách email admin được duyệt (whitelist riêng theo sự kiện, đọc
+  // trực tiếp từ tab sheet "AdminEmail" — admin tự thêm/xoá email trong Sheet,
+  // web app CHỈ ĐỌC để đổ vào <select> chọn nơi nhận OTP, không sửa được).
   function admLoadAdminMailList() {
     var select = document.getElementById('mail-otp-email-select');
     select.innerHTML = '<option value="">Đang tải danh sách...</option>';
@@ -1727,7 +1721,6 @@
         }
         admAdminMailEmails = res.emails || [];
         admRenderAdminMailSelect();
-        document.getElementById('mail-admin-list-textarea').value = admAdminMailEmails.join('\n');
       })
       .catch(function () {
         select.innerHTML = '<option value="">(Lỗi kết nối)</option>';
@@ -1738,7 +1731,7 @@
     var select = document.getElementById('mail-otp-email-select');
     var btn = document.getElementById('mail-otp-request-btn');
     if (!admAdminMailEmails.length) {
-      select.innerHTML = '<option value="">— Chưa có email nào, bấm "Quản lý danh sách" để thêm —</option>';
+      select.innerHTML = '<option value="">— Chưa có email nào, thêm ở tab "AdminEmail" trong Sheet —</option>';
       btn.disabled = true;
     } else {
       select.innerHTML = admAdminMailEmails.map(function (e) {
@@ -1746,28 +1739,6 @@
       }).join('');
       btn.disabled = false;
     }
-  }
-
-  function admToggleAdminMailManage() {
-    document.getElementById('mail-admin-list-manage').classList.toggle('hidden');
-  }
-
-  function admSaveAdminMailList() {
-    var raw = document.getElementById('mail-admin-list-textarea').value;
-    var emails = raw.split(/[\n;,]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-    var status = document.getElementById('mail-admin-list-status');
-    status.textContent = '⏳ Đang lưu...';
-    callApi('adminSaveAdminMailList', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE, emails: emails })
-      .then(function (res) {
-        if (!res.success) { status.innerHTML = '<span style="color:var(--danger)">❌ ' + res.error + '</span>'; return; }
-        admAdminMailEmails = res.emails || [];
-        document.getElementById('mail-admin-list-textarea').value = admAdminMailEmails.join('\n');
-        admRenderAdminMailSelect();
-        status.innerHTML = '✅ Đã lưu (' + admAdminMailEmails.length + ' email).';
-      })
-      .catch(function (err) {
-        status.innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + err.message + '</span>';
-      });
   }
 
   function admRequestMailOtp() {
