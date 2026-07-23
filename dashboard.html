@@ -119,14 +119,17 @@
   .mail-progress-fill{height:100%;width:0%;background:var(--primary);transition:width .3s ease}
   .mail-row-excluded{opacity:.45}
   .mail-candidate-checkbox{width:16px;height:16px}
+  .mail-col-filter-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .mail-col-filter-row input{flex:1;min-width:110px;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;color:var(--text)}
+  .mail-col-filter-row input:focus{outline:none;border-color:var(--primary)}
   .toggle-row input{width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
 
-  .rte-toolbar{display:flex;gap:6px;margin-bottom:6px}
+  .rte-toolbar{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
   .rte-btn{width:32px;height:32px;border:2px solid var(--border);border-radius:7px;background:white;cursor:pointer;font-size:13px;color:var(--text)}
   .rte-btn.active{border-color:var(--primary);background:var(--bg);color:var(--primary)}
-  .rte-size{padding:6px 10px;border:2px solid var(--border);border-radius:7px;font-family:inherit;font-size:12px;background:white;color:var(--text);cursor:pointer}
+  .rte-size,.rte-font{padding:6px 10px;border:2px solid var(--border);border-radius:7px;font-family:inherit;font-size:12px;background:white;color:var(--text);cursor:pointer}
   .rte-editable{width:100%;min-height:90px;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;color:var(--text);outline:none;line-height:1.6;overflow-y:auto}
-  .rte-editable *{font-family:inherit!important;color:inherit!important}
+  .rte-editable *{color:inherit!important}
   .rte-editable:focus{border-color:var(--primary)}
   .rte-editable b, .rte-editable strong{font-weight:700}
   .color-row{display:flex;align-items:center;gap:10px}
@@ -166,7 +169,7 @@
 
   .preview-table-wrap{overflow-x:auto;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px;margin-top:10px;max-height:320px}
   .preview-table{border-collapse:collapse;font-size:12px;white-space:nowrap}
-  .preview-table th{background:var(--bg);padding:6px 10px;border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--muted);position:sticky;top:0}
+  .preview-table th{background:var(--bg);padding:6px 10px;border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--muted);position:sticky;top:0;z-index:2;box-shadow:0 2px 4px rgba(0,0,0,.08)}
   .preview-table td{padding:6px 10px;border:1px solid var(--border);color:var(--text)}
   .preview-table tr:first-child td{background:#fffbeb}
   .colmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
@@ -691,8 +694,24 @@
 
     <!-- Nội dung thật của tab, chỉ hiện sau khi mailToken hợp lệ -->
     <div id="mail-compose-area" class="hidden">
+
       <div class="card">
-        <div class="card-title">Soạn thư mời</div>
+        <div class="card-title">⚙️ Cấu hình gửi</div>
+        <div class="field">
+          <label>Loại link đăng ký dùng trong email</label>
+          <label class="toggle-row-sm" style="margin-top:8px">
+            <input type="radio" name="mail-link-type" id="mail-link-personal" checked>
+            <span><b>Cá nhân hoá theo MSNV</b> — mỗi người nhận 1 link riêng, tự động điền sẵn mã nhân viên</span>
+          </label>
+          <label class="toggle-row-sm">
+            <input type="radio" name="mail-link-type" id="mail-link-shared">
+            <span><b>Link chung cho mọi người</b> — tất cả nhận cùng 1 link, tự nhập mã nhân viên khi vào trang đăng ký</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">✍️ Soạn thư mời</div>
         <div class="field">
           <label>Tiêu đề email</label>
           <input id="mail-subject" placeholder="VD: [Thư mời] {HoTen} ơi, đăng ký tham dự sự kiện nhé!" onfocus="admMailLastFocusTarget='subject'">
@@ -709,35 +728,32 @@
         </div>
 
         <div class="field" style="margin-top:12px">
-          <label>Chèn ảnh trực tiếp từ máy (nhúng vào thân mail — giống thao tác "Insert Pictures" của Outlook, không cần host ảnh ở đâu cả)</label>
-          <input type="file" id="mail-inline-image-input" accept="image/*" style="display:none" onchange="admInsertInlineImage(this)">
-          <label class="toggle-row-sm" style="margin:6px 0 8px">
-            <input type="checkbox" id="mail-inline-image-link" checked>
-            <span>Bọc ảnh trong link cá nhân hoá (bấm vào ảnh sẽ đi tới link đăng ký riêng của người nhận)</span>
-          </label>
-          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('mail-inline-image-input').click()">🖼️ Chọn ảnh từ máy...</button>
-          <div class="colmap-hint" style="margin-top:4px">Bấm vào vị trí muốn chèn trong ô nội dung trước, rồi chọn ảnh. Ảnh gắn kiểu này hiển thị được trên MỌI Outlook (kể cả Outlook desktop) vì được đính kèm dạng inline attachment (Content-ID), không phải link ảnh ngoài. Nên dùng ảnh đã nén, dưới ~500KB để email không quá nặng.</div>
-        </div>
-
-        <div class="field" style="margin-top:12px">
-          <label>Hoặc dùng ảnh poster host sẵn ở URL ngoài (tuỳ chọn) — chèn vào đúng vị trí con trỏ đang đứng</label>
-          <div style="display:flex;gap:8px">
-            <input id="mail-poster-url" placeholder="https://.../poster.jpg (phải là link public — Drive dạng chia sẻ công khai hoặc host trên GitHub Pages)" style="flex:1">
-            <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPoster()" style="white-space:nowrap">🔗 Chèn ảnh + link cá nhân hoá</button>
-          </div>
-          <div class="colmap-hint" style="margin-top:4px">Ảnh được bọc trong link {LinkDangKy} — bấm vào ảnh sẽ đi thẳng tới link đăng ký riêng của người nhận. Cách này phụ thuộc ảnh còn tồn tại ở URL đó và nhiều mail client (Outlook) mặc định chặn tải ảnh ngoài cho tới khi người nhận bấm "Download pictures" — nếu cần ảnh CHẮC CHẮN hiện ngay, dùng ô "chèn ảnh từ máy" phía trên thay vì ô này.</div>
-        </div>
-        <div class="field" style="margin-top:12px">
           <label>Nội dung email</label>
           <div class="rte-toolbar" data-target="mail-body">
-            <button type="button" class="rte-btn" data-cmd="bold"><b>B</b></button>
-            <select class="rte-size">
+            <select class="rte-font" title="Font chữ">
+              <option value="">Font chữ</option>
+              <option value="Arial, Helvetica, sans-serif">Arial</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="Verdana, sans-serif">Verdana</option>
+              <option value="Tahoma, sans-serif">Tahoma</option>
+            </select>
+            <select class="rte-size" title="Cỡ chữ">
               <option value="">Cỡ chữ</option>
               <option value="2">Nhỏ</option>
               <option value="3">Vừa</option>
               <option value="5">Lớn</option>
               <option value="6">Rất lớn</option>
             </select>
+            <button type="button" class="rte-btn" data-cmd="bold" title="In đậm"><b>B</b></button>
+            <button type="button" class="rte-btn" data-cmd="italic" title="In nghiêng"><i>I</i></button>
+            <button type="button" class="rte-btn" data-cmd="underline" title="Gạch chân"><u>U</u></button>
+            <button type="button" class="rte-btn" data-cmd="justifyLeft" title="Căn trái">⬅</button>
+            <button type="button" class="rte-btn" data-cmd="justifyCenter" title="Căn giữa">↔</button>
+            <button type="button" class="rte-btn" data-cmd="justifyRight" title="Căn phải">➡</button>
+            <button type="button" class="rte-btn rte-link-btn" title="Chèn liên kết">🔗</button>
+            <button type="button" class="rte-btn rte-image-btn" title="Chèn ảnh từ máy">🖼️</button>
           </div>
           <div class="rte-editable" id="mail-body" contenteditable="true" style="min-height:220px" onfocus="admMailLastFocusTarget='body'">
             Chào {HoTen},<br><br>
@@ -746,14 +762,26 @@
             Trân trọng.
           </div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" id="mail-test-btn" onclick="admSendTestMail()">✉️ Gửi thử về email admin</button>
+
+        <input type="file" id="mail-inline-image-input" accept="image/*" style="display:none" onchange="admInsertInlineImage(this)">
+        <label class="toggle-row-sm" style="margin-top:10px">
+          <input type="checkbox" id="mail-inline-image-link" checked>
+          <span>Ảnh chèn từ nút 🖼️ tự bọc trong link cá nhân hoá (bấm vào ảnh sẽ đi tới link đăng ký riêng của người nhận)</span>
+        </label>
+        <div class="colmap-hint" style="margin-top:2px">Ảnh chèn kiểu này hiển thị được trên MỌI Outlook (kể cả Outlook desktop) vì đính kèm dạng inline attachment (Content-ID), không phải link ảnh ngoài. Nên dùng ảnh đã nén, dưới ~500KB để email không quá nặng.</div>
+
+        <button type="button" class="btn btn-outline btn-sm" onclick="admToggleAdvancedImage()" style="margin-top:12px">🔗 Tuỳ chọn khác: chèn ảnh từ URL ngoài</button>
+        <div id="mail-advanced-image" class="hidden" style="margin-top:10px">
+          <div style="display:flex;gap:8px">
+            <input id="mail-poster-url" placeholder="https://.../poster.jpg (phải là link public — Drive dạng chia sẻ công khai hoặc host trên GitHub Pages)" style="flex:1">
+            <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPoster()" style="white-space:nowrap">Chèn vào vị trí con trỏ</button>
+          </div>
+          <div class="colmap-hint" style="margin-top:4px">Ảnh được bọc trong link {LinkDangKy}. Cách này phụ thuộc ảnh còn tồn tại ở URL đó và nhiều mail client (Outlook) mặc định chặn tải ảnh ngoài cho tới khi người nhận bấm "Download pictures" — nếu cần ảnh CHẮC CHẮN hiện ngay, dùng nút 🖼️ trong thanh công cụ phía trên thay vì ô này.</div>
         </div>
-        <p id="mail-test-status" style="font-size:12px;margin-top:8px"></p>
       </div>
 
       <div class="card">
-        <div class="card-title">Chọn người nhận</div>
+        <div class="card-title">👥 Chọn người nhận</div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Bộ lọc dưới đây chỉ đổi trạng thái CHỌN SẴN — anh/chị vẫn có thể tick/bỏ tick tay từng người trong bảng cho các trường hợp đặc biệt trước khi gửi.</p>
         <div class="mail-filter-row">
           <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-confirmed" checked onchange="admApplyMailFilters()"><span>Loại trừ người đã xác nhận đăng ký (Có/Không tham dự)</span></label>
@@ -761,7 +789,12 @@
           <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-surveyed" checked onchange="admApplyMailFilters()"><span>Loại trừ người đã khảo sát</span></label>
           <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-noemail" checked disabled><span>Tự động loại trừ người không có email</span></label>
         </div>
-        <div class="search-wrap" style="margin-top:10px"><input type="search" class="search-input" id="mail-candidates-search" name="mail-recipient-search" autocomplete="one-time-code" placeholder="Tìm theo tên, mã NV, phòng ban..." oninput="admRenderMailCandidatesTable()"></div>
+        <div class="mail-col-filter-row">
+          <input type="search" id="mfcol-msnv" name="mfcol-msnv" autocomplete="one-time-code" placeholder="Lọc MSNV..." oninput="admRenderMailCandidatesTable()">
+          <input type="search" id="mfcol-hoten" name="mfcol-hoten" autocomplete="one-time-code" placeholder="Lọc họ tên..." oninput="admRenderMailCandidatesTable()">
+          <input type="search" id="mfcol-phongban" name="mfcol-phongban" autocomplete="one-time-code" placeholder="Lọc phòng ban..." oninput="admRenderMailCandidatesTable()">
+          <input type="search" id="mfcol-email" name="mfcol-email" autocomplete="one-time-code" placeholder="Lọc email..." oninput="admRenderMailCandidatesTable()">
+        </div>
         <div class="filter-row" style="margin-top:10px">
           <button class="filter-btn active" id="mfs-all" onclick="admSetMailStatusFilter('all')">Tất cả</button>
           <button class="filter-btn" id="mfs-selected" onclick="admSetMailStatusFilter('selected')">Đã chọn</button>
@@ -775,19 +808,19 @@
           <span id="mail-select-summary" style="font-size:13px;color:var(--text);font-weight:600;margin-left:auto"></span>
         </div>
         <div id="mail-candidates-status" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
-        <div class="preview-table-wrap" style="max-height:420px">
+        <div class="preview-table-wrap" style="max-height:440px">
           <table class="preview-table" id="mail-candidates-table"></table>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">Gửi</div>
-        <label class="toggle-row-sm">
-          <input type="checkbox" id="mail-shared-link">
-          <span>Dùng link đăng ký CHUNG cho mọi người (không cá nhân hoá theo MSNV) — người nhận sẽ tự nhập mã nhân viên khi vào trang đăng ký</span>
-        </label>
-        <p style="font-size:12px;color:var(--muted);margin:8px 0 12px">Hệ thống gửi theo từng đợt nhỏ (khoảng 80 người/đợt) để tránh vượt giới hạn thời gian chạy của Google Apps Script — quá trình gửi hàng trăm/nghìn người có thể mất vài phút, đừng đóng tab trong lúc gửi.</p>
-        <button class="btn btn-primary btn-full" id="mail-send-btn" onclick="admSendAllMail()">📨 Gửi cho người đã chọn</button>
+        <div class="card-title">📤 Gửi</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Nên gửi thử trước để kiểm tra định dạng/link, rồi mới gửi thật. Hệ thống gửi thật theo từng đợt nhỏ (khoảng 80 người/đợt) để tránh vượt giới hạn thời gian chạy của Google Apps Script — quá trình gửi hàng trăm/nghìn người có thể mất vài phút, đừng đóng tab trong lúc gửi.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-outline" id="mail-test-btn" onclick="admSendTestMail()" style="white-space:nowrap">✉️ Gửi thử (về email admin)</button>
+          <button class="btn btn-primary" id="mail-send-btn" onclick="admSendAllMail()" style="flex:1;min-width:220px">📨 Gửi cho người đã chọn</button>
+        </div>
+        <p id="mail-test-status" style="font-size:12px;margin-top:8px"></p>
         <div id="mail-send-progress" class="hidden" style="margin-top:14px">
           <div class="mail-progress-track"><div class="mail-progress-fill" id="mail-progress-fill"></div></div>
           <p id="mail-progress-text" style="font-size:12px;color:var(--muted);margin-top:6px"></p>
@@ -1428,10 +1461,24 @@
     document.querySelectorAll('.rte-toolbar').forEach(function (toolbar) {
       var targetId = toolbar.getAttribute('data-target');
       var editable = document.getElementById(targetId);
+
       toolbar.querySelector('.rte-btn[data-cmd="bold"]').addEventListener('click', function () {
         editable.focus();
         document.execCommand('bold');
       });
+
+      // Các nút định dạng dùng chung 1 lệnh execCommand đơn giản (italic,
+      // underline, căn lề) — chỉ tồn tại ở toolbar "mail-body" hiện tại, các
+      // toolbar khác (mô tả trang đăng ký...) không có nút này nên bỏ qua an toàn.
+      toolbar.querySelectorAll('.rte-btn[data-cmd]').forEach(function (btn) {
+        var cmd = btn.getAttribute('data-cmd');
+        if (cmd === 'bold') return; // đã gắn riêng ở trên
+        btn.addEventListener('click', function () {
+          editable.focus();
+          document.execCommand(cmd);
+        });
+      });
+
       var sizeSelect = toolbar.querySelector('.rte-size');
       sizeSelect.addEventListener('change', function () {
         if (!sizeSelect.value) return;
@@ -1439,6 +1486,47 @@
         document.execCommand('fontSize', false, sizeSelect.value);
         sizeSelect.value = '';
       });
+
+      var fontSelect = toolbar.querySelector('.rte-font');
+      if (fontSelect) {
+        fontSelect.addEventListener('change', function () {
+          if (!fontSelect.value) return;
+          editable.focus();
+          document.execCommand('fontName', false, fontSelect.value);
+          fontSelect.value = '';
+        });
+      }
+
+      // Chèn liên kết cho VĂN BẢN đang bôi đen (khác nút "chèn ảnh + link"
+      // vốn chỉ dành riêng cho ảnh) — nếu chưa bôi đen gì thì chèn luôn cả
+      // chữ lẫn link để tránh execCommand('createLink') không có gì để áp dụng.
+      var linkBtn = toolbar.querySelector('.rte-link-btn');
+      if (linkBtn) {
+        linkBtn.addEventListener('click', function () {
+          var url = prompt('Nhập URL cho liên kết (để trống để dùng link cá nhân hoá {LinkDangKy}):', 'https://');
+          if (url === null) return;
+          if (!url.trim()) url = '{LinkDangKy}';
+          editable.focus();
+          var sel = window.getSelection();
+          if (!sel || sel.isCollapsed) {
+            document.execCommand('insertHTML', false, '<a href="' + url.replace(/"/g, '&quot;') + '">' + url + '</a>');
+          } else {
+            document.execCommand('createLink', false, url);
+          }
+        });
+      }
+
+      // Nút chèn ảnh trên toolbar chỉ có ở "mail-body" — kích hoạt lại đúng
+      // input file ẩn (mail-inline-image-input) đã có sẵn logic xử lý riêng.
+      var imageBtn = toolbar.querySelector('.rte-image-btn');
+      if (imageBtn) {
+        imageBtn.addEventListener('click', function () {
+          editable.focus();
+          var fileInput = document.getElementById('mail-inline-image-input');
+          if (fileInput) fileInput.click();
+        });
+      }
+
       // Paste từ Word/Docs mang theo font-family, màu, span style riêng — luôn ép về
       // plain text khi dán để đồng bộ font hệ thống, người dùng tự bôi đậm/cỡ chữ lại
       // bằng toolbar nếu cần sau khi dán.
@@ -1448,6 +1536,10 @@
         document.execCommand('insertText', false, text);
       });
     });
+  }
+
+  function admToggleAdvancedImage() {
+    document.getElementById('mail-advanced-image').classList.toggle('hidden');
   }
 
   function admOnEventsLoaded(res) {
@@ -1936,8 +2028,10 @@
 
   function admReloadMailCandidates() {
     document.getElementById('mail-candidates-status').textContent = '⏳ Đang tải danh sách...';
-    var searchEl = document.getElementById('mail-candidates-search');
-    if (searchEl) searchEl.value = '';
+    ['mfcol-msnv', 'mfcol-hoten', 'mfcol-phongban', 'mfcol-email'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
     admMailStatusFilter = 'all';
     ['mfs-all', 'mfs-selected', 'mfs-unselected', 'mfs-noemail'].forEach(function (id) {
       var el = document.getElementById(id);
@@ -1982,15 +2076,18 @@
   // chip trạng thái đang chọn (admMailStatusFilter) — idx là chỉ số GỐC trong
   // admMailCandidates, dùng để tick/bỏ tick đúng người dù bảng đang lọc.
   function admGetFilteredMailCandidates() {
-    var q = (document.getElementById('mail-candidates-search').value || '').toLowerCase().trim();
+    var fMsnv = (document.getElementById('mfcol-msnv').value || '').toLowerCase().trim();
+    var fHoTen = (document.getElementById('mfcol-hoten').value || '').toLowerCase().trim();
+    var fPhongBan = (document.getElementById('mfcol-phongban').value || '').toLowerCase().trim();
+    var fEmail = (document.getElementById('mfcol-email').value || '').toLowerCase().trim();
     return admMailCandidates
       .map(function (c, idx) { return { c: c, idx: idx }; })
       .filter(function (p) {
         var c = p.c;
-        if (q) {
-          var hay = (c.msnv + ' ' + c.hoTen + ' ' + c.phongBan).toLowerCase();
-          if (hay.indexOf(q) < 0) return false;
-        }
+        if (fMsnv && String(c.msnv || '').toLowerCase().indexOf(fMsnv) < 0) return false;
+        if (fHoTen && String(c.hoTen || '').toLowerCase().indexOf(fHoTen) < 0) return false;
+        if (fPhongBan && String(c.phongBan || '').toLowerCase().indexOf(fPhongBan) < 0) return false;
+        if (fEmail && String(c.email || '').toLowerCase().indexOf(fEmail) < 0) return false;
         if (admMailStatusFilter === 'selected' && !c.selected) return false;
         if (admMailStatusFilter === 'unselected' && c.selected) return false;
         if (admMailStatusFilter === 'noemail' && c.email) return false;
@@ -2072,7 +2169,7 @@
       return;
     }
     var extracted = admExtractInlineAttachments(rawHtml); // tách ảnh chèn từ máy -> cid: attachment
-    var sharedLink = document.getElementById('mail-shared-link').checked;
+    var sharedLink = document.getElementById('mail-link-shared').checked;
     var btn = document.getElementById('mail-test-btn');
     btn.innerHTML = '⏳ Đang gửi...'; btn.disabled = true;
     callApi('adminSendTestMail', {
@@ -2105,7 +2202,7 @@
     }
     var extracted = admExtractInlineAttachments(rawHtml); // tách ảnh chèn từ máy -> cid: attachment (dùng chung mọi người nhận)
     var html = extracted.html;
-    var sharedLink = document.getElementById('mail-shared-link').checked;
+    var sharedLink = document.getElementById('mail-link-shared').checked;
     var selected = admMailCandidates.filter(function (c) { return c.selected && c.email; }).map(function (c) { return c.msnv; });
     if (!selected.length) {
       document.getElementById('mail-send-result').innerHTML = '<span style="color:var(--danger)">Chưa chọn người nhận nào (có email).</span>';
@@ -2463,7 +2560,10 @@
       [
         ['search-input', applyFilter],
         ['ns-search', renderNotSurveyed],
-        ['mail-candidates-search', admRenderMailCandidatesTable]
+        ['mfcol-msnv', admRenderMailCandidatesTable],
+        ['mfcol-hoten', admRenderMailCandidatesTable],
+        ['mfcol-phongban', admRenderMailCandidatesTable],
+        ['mfcol-email', admRenderMailCandidatesTable]
       ].forEach(function (pair) {
         var el = document.getElementById(pair[0]);
         if (el && el.value) {
