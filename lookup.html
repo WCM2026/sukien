@@ -107,8 +107,14 @@
   .team-member-row { display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--border); }
   .team-member-row:last-child { border-bottom:none; }
   .team-member-avatar { width:34px; height:34px; border-radius:50%; background:var(--bg); color:var(--primary); font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .team-member-name-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
   .team-member-name { font-size:14px; font-weight:700; color:var(--text); }
   .team-member-sub { font-size:12px; color:var(--muted); margin-top:1px; }
+  .role-badge { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.3px; padding:2.5px 8px; border-radius:999px; line-height:1.5; }
+  .role-badge.role-truong { background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; }
+  .role-badge.role-pho { background:rgba(226,35,26,.12); color:var(--primary-dark); }
+  .role-badge.role-uy { background:#eef2ff; color:#4338ca; }
+  .role-badge.role-other { background:var(--bg); color:var(--muted); }
 
   .status-box { border-radius:12px; padding:16px 20px; font-size:14px; font-weight:600; text-align:center; }
   .status-success { background:#f0fdf4; color:#166534; border:1.5px solid #bbf7d0; }
@@ -118,6 +124,7 @@
 
   .hidden { display:none!important; }
   .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:white; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
+  .spinner-dark { border:2.5px solid rgba(226,35,26,.18); border-top-color:var(--primary); margin-right:8px; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
   #boot-overlay {
@@ -219,7 +226,13 @@
   var PREFILL_MSNV = getQueryParam('msnv');
   var SESSION_TOKEN = Math.random().toString(36).substr(2,12) + Date.now().toString(36);
   var teamFeatureEnabled = false;
-  var teamOptionsLoaded  = false;
+  // allTeamsData: { teams:[{doi,soLuong}], membersByTeam:{doi:[...]} } — tải 1
+  // lần duy nhất khi vào trang rồi cache ở client, để bấm đổi đội KHÔNG cần
+  // gọi lại API (trước đây mỗi lần đổi đội gọi lại 1 API riêng -> chậm vì phải
+  // đọc lại Sheet mỗi lần). allTeamsPromise dùng cho trường hợp hiếm người
+  // dùng bấm quá nhanh trước khi prefetch kịp xong.
+  var allTeamsData = null;
+  var allTeamsPromise = null;
 
   window.addEventListener('DOMContentLoaded', function() {
     if (!EVENT_ID) {
@@ -235,15 +248,10 @@
     }).catch(function () { hideBootOverlay(); });
     // An toàn: nếu API quá chậm hoặc treo, vẫn tự ẩn overlay sau 6s để không chặn người dùng mãi
     setTimeout(hideBootOverlay, 6000);
-    // Dò xem sự kiện có bật tính năng chia đội không — chỉ hiện tab "Danh sách
-    // theo đội" khi getTeamOptions trả về success (tức ColDoi đã được khai báo).
-    callApi('getTeamOptions', { eventId: EVENT_ID }).then(function (res) {
-      if (res.success) {
-        teamFeatureEnabled = true;
-        document.getElementById('tab-nav').classList.remove('hidden');
-        renderTeamOptions(res.data);
-      }
-    }).catch(function () {});
+    // Tải trước TOÀN BỘ dữ liệu chia đội ngay khi vào trang (song song với boot
+    // overlay đang hiện) — nhờ vậy khi người dùng bấm sang tab "Danh sách theo
+    // đội" hoặc đổi đội, dữ liệu đã sẵn sàng, không phải chờ gọi mạng nữa.
+    prefetchTeamData();
     if (PREFILL_MSNV && PREFILL_MSNV !== '') {
       var input = document.getElementById('msnv-input');
       if (input) { input.value = PREFILL_MSNV; setTimeout(lookupInfo, 300); }
@@ -366,22 +374,33 @@
 
   /* ---------- TAB: DANH SÁCH THEO ĐỘI ---------- */
 
+  // Gọi 1 LẦN DUY NHẤT khi vào trang — trả về sẵn cả danh sách đội lẫn thành
+  // viên từng đội trong 1 payload, nhờ vậy các thao tác sau (mở tab, đổi đội)
+  // không cần gọi lại API nữa, tránh hiện tượng "load rất lâu" mỗi lần bấm.
+  function prefetchTeamData() {
+    allTeamsPromise = callApi('getAllTeamsData', { eventId: EVENT_ID }).then(function (res) {
+      if (res.success) {
+        teamFeatureEnabled = true;
+        allTeamsData = res.data;
+        document.getElementById('tab-nav').classList.remove('hidden');
+        renderTeamOptions(allTeamsData.teams);
+      }
+      return res;
+    }).catch(function () {});
+    return allTeamsPromise;
+  }
+
   function switchTab(name) {
     var isPersonal = name === 'personal';
     document.getElementById('panel-personal').classList.toggle('hidden', !isPersonal);
     document.getElementById('panel-team').classList.toggle('hidden', isPersonal);
     document.getElementById('tab-btn-personal').classList.toggle('active', isPersonal);
     document.getElementById('tab-btn-team').classList.toggle('active', !isPersonal);
-    if (!isPersonal && teamFeatureEnabled && !teamOptionsLoaded) {
-      callApi('getTeamOptions', { eventId: EVENT_ID }).then(function (res) {
-        if (res.success) renderTeamOptions(res.data);
-      });
-    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function renderTeamOptions(teams) {
-    teamOptionsLoaded = true;
+    document.getElementById('team-select-status').innerHTML = '';
     var wrap = document.getElementById('team-select-row');
     if (!teams || !teams.length) {
       document.getElementById('team-select-status').innerHTML =
@@ -389,7 +408,6 @@
       wrap.innerHTML = '';
       return;
     }
-    document.getElementById('team-select-status').innerHTML = '';
     wrap.innerHTML = teams.map(function (t) {
       return '<button class="team-chip" data-doi="' + escapeHtml(t.doi) + '" onclick="loadTeamMembers(this.getAttribute(\'data-doi\'))">' +
         escapeHtml(t.doi) + ' <span class="team-chip-count">(' + t.soLuong + ')</span>' +
@@ -404,36 +422,61 @@
 
     var card = document.getElementById('team-result-card');
     card.classList.remove('hidden');
-    document.getElementById('team-members-title').textContent = 'Đang tải danh sách ' + doi + '...';
-    document.getElementById('team-members-list').innerHTML = '';
 
-    callApi('getTeamMembers', { eventId: EVENT_ID, doi: doi }).then(function (res) {
-      if (!res.success) {
-        document.getElementById('team-members-title').textContent = doi;
-        document.getElementById('team-members-list').innerHTML =
-          '<div class="status-box status-error">' + escapeHtml(res.error || 'Không tải được danh sách.') + '</div>';
-        return;
-      }
-      var members = res.data.members || [];
-      document.getElementById('team-members-title').textContent = res.data.doi + ' — ' + members.length + ' người';
-      if (!members.length) {
-        document.getElementById('team-members-list').innerHTML = '<div class="lookup-empty-state">Chưa có ai trong đội này.</div>';
-        return;
-      }
-      document.getElementById('team-members-list').innerHTML = members.map(function (m) {
-        var sub = [m.chucDanh, m.phongBan].filter(Boolean).join(' · ');
-        return '<div class="team-member-row">' +
-          '<div class="team-member-avatar">' + ((m.hoTen || '?').trim().charAt(0).toUpperCase() || '?') + '</div>' +
-          '<div><div class="team-member-name">' + escapeHtml(m.hoTen || '(Chưa rõ tên)') + '</div>' +
-          (sub ? '<div class="team-member-sub">' + escapeHtml(sub) + '</div>' : '') + '</div>' +
-        '</div>';
-      }).join('');
-      window.scrollTo({ top: document.getElementById('team-result-card').offsetTop - 12, behavior: 'smooth' });
+    // Trường hợp bình thường: dữ liệu đã prefetch sẵn -> render NGAY, không
+    // có độ trễ mạng nào cả (đây là điểm cải thiện tốc độ chính).
+    if (allTeamsData && allTeamsData.membersByTeam && allTeamsData.membersByTeam[doi]) {
+      renderTeamMembers(doi, allTeamsData.membersByTeam[doi]);
+      return;
+    }
+
+    // Trường hợp hiếm: người dùng bấm quá nhanh trước khi prefetch tải xong
+    // (hoặc mạng chậm) -> hiện spinner xoay rồi chờ đúng lượt tải đó xong.
+    document.getElementById('team-members-title').innerHTML =
+      '<span class="spinner spinner-dark"></span> Đang tải danh sách ' + escapeHtml(doi) + '...';
+    document.getElementById('team-members-list').innerHTML = '';
+    (allTeamsPromise || prefetchTeamData()).then(function () {
+      var members = (allTeamsData && allTeamsData.membersByTeam && allTeamsData.membersByTeam[doi]) || [];
+      renderTeamMembers(doi, members);
     }).catch(function (err) {
       document.getElementById('team-members-title').textContent = doi;
       document.getElementById('team-members-list').innerHTML =
         '<div class="status-box status-error">Lỗi kết nối: ' + escapeHtml(err.message) + '</div>';
     });
+  }
+
+  function renderTeamMembers(doi, members) {
+    document.getElementById('team-members-title').textContent = doi + ' — ' + members.length + ' người';
+    if (!members.length) {
+      document.getElementById('team-members-list').innerHTML = '<div class="lookup-empty-state">Chưa có ai trong đội này.</div>';
+      return;
+    }
+    document.getElementById('team-members-list').innerHTML = members.map(function (m) {
+      var sub = [m.chucDanh, m.phongBan].filter(Boolean).join(' · ');
+      return '<div class="team-member-row">' +
+        '<div class="team-member-avatar">' + ((m.hoTen || '?').trim().charAt(0).toUpperCase() || '?') + '</div>' +
+        '<div><div class="team-member-name-row">' +
+          '<span class="team-member-name">' + escapeHtml(m.hoTen || '(Chưa rõ tên)') + '</span>' +
+          roleBadgeHtml(m.vaiTro) +
+        '</div>' +
+        (sub ? '<div class="team-member-sub">' + escapeHtml(sub) + '</div>' : '') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Bỏ dấu tiếng Việt + lowercase để nhận diện đúng "Đội trưởng"/"Đội phó"/
+  // "Chính ủy" dù Sheet ghi hoa/thường/khoảng trắng khác nhau — cùng logic
+  // chuẩn hoá với backend (normalizeNoDiacritics_ trong Code.gs).
+  function normalizeNoDiacritics(s) {
+    s = String(s == null ? '' : s).trim().toLowerCase();
+    s = s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
+    return s.replace(/đ/g, 'd');
+  }
+  function roleBadgeHtml(vaiTro) {
+    if (!vaiTro) return '';
+    var n = normalizeNoDiacritics(vaiTro);
+    var cls = n === 'doi truong' ? 'role-truong' : n === 'doi pho' ? 'role-pho' : n === 'chinh uy' ? 'role-uy' : 'role-other';
+    return '<span class="role-badge ' + cls + '">' + escapeHtml(vaiTro) + '</span>';
   }
 </script>
 </body>
