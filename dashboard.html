@@ -629,6 +629,11 @@
         <div class="colmap-field"><label>Dòng chứa tiêu đề của khối Tra cứu</label><input id="cm-ColTraCuuHeaderRow" placeholder="Để trống = tự lấy dòng ngay trên vùng dữ liệu"><div class="colmap-hint">Vd nếu dòng 1 của Sheet là tiêu đề (Số điện thoại, Khách sạn, Số phòng...) thì nhập 1.</div></div>
       </div>
 
+      <div class="colmap-section-title">Chia đội (tab "Danh sách theo đội" trên lookup.html)</div>
+      <div class="colmap-grid">
+        <div class="colmap-field"><label>Cột Đội (để trống nếu sự kiện này không chia đội)</label><input id="cm-ColDoi" placeholder="Để trống = không dùng"><div class="colmap-hint">Cột ghi số/tên đội của từng người (vd "Đội 1", "1"...). Hệ thống tự gom danh sách các đội đang có dữ liệu — không cần khai báo tay từng đội. Trang Tra cứu sẽ hiện thêm tab để mọi người chọn đội và xem Họ tên/Phòng ban/Chức danh của cả đội (không hiện MSNV người khác).</div></div>
+      </div>
+
       <button class="btn btn-primary btn-full" style="margin-top:18px" id="save-cm-btn" onclick="admSaveColumnMap()">💾 Lưu cấu trúc cột</button>
       <p style="font-size:12px;color:var(--muted);margin-top:10px">Sau khi lưu, vào lại tab "Câu hỏi khảo sát" hoặc trang Đăng ký để kiểm tra dữ liệu đã đọc đúng chưa.</p>
       <p id="lookup-preview-link" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
@@ -1724,6 +1729,7 @@
         document.getElementById('cm-ColMu').value = c.ColMu || '';
         document.getElementById('cm-ColTraCuuStart').value = c.ColTraCuuStart || '';
         document.getElementById('cm-ColTraCuuHeaderRow').value = c.ColTraCuuHeaderRow || '';
+        document.getElementById('cm-ColDoi').value = c.ColDoi || '';
         admRenderLookupPreviewLink(c.ColTraCuuStart);
       })
       .catch(function (err) {
@@ -1756,7 +1762,8 @@
       ColEmail: document.getElementById('cm-ColEmail').value.trim(),
       ColMu: document.getElementById('cm-ColMu').value.trim(),
       ColTraCuuStart: document.getElementById('cm-ColTraCuuStart').value.trim(),
-      ColTraCuuHeaderRow: document.getElementById('cm-ColTraCuuHeaderRow').value.trim()
+      ColTraCuuHeaderRow: document.getElementById('cm-ColTraCuuHeaderRow').value.trim(),
+      ColDoi: document.getElementById('cm-ColDoi').value.trim()
     };
     var btn = document.getElementById('save-cm-btn');
     btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;

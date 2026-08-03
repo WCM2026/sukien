@@ -88,6 +88,28 @@
   .lookup-value.empty { color:#c2c9d2; font-weight:600; }
   .lookup-empty-state { text-align:center; color:var(--muted); font-size:13.5px; padding:8px 0; }
 
+  .own-team-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; background:rgba(226,35,26,.06); border:1.5px solid rgba(226,35,26,.16); border-radius:12px; padding:12px 14px; margin-top:14px; }
+  .own-team-text { font-size:13.5px; font-weight:700; color:var(--text); }
+  .own-team-text b { color:var(--primary); }
+  .btn-sm { padding:9px 14px; font-size:13px; border-radius:10px; }
+
+  .tab-nav { display:flex; gap:8px; margin-bottom:14px; animation:fadeUp .4s ease .05s both; }
+  .tab-nav-btn { flex:1; padding:12px 10px; border-radius:12px; border:1.5px solid var(--border); background:#fff; color:var(--muted); font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s, color .15s; text-align:center; }
+  .tab-nav-btn.active { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; box-shadow:0 6px 16px -8px rgba(226,35,26,.5); }
+
+  .team-select-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+  .team-chip { padding:9px 16px; border-radius:999px; border:1.5px solid var(--border); background:#fff; font-family:inherit; font-size:13px; font-weight:700; color:var(--text); cursor:pointer; transition:transform .12s, border-color .12s, background .12s, box-shadow .12s; }
+  .team-chip:hover { border-color:var(--primary); }
+  .team-chip.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; transform:scale(1.04); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
+  .team-chip-count { opacity:.75; font-weight:600; }
+
+  .team-members-title { font-size:14px; font-weight:800; color:var(--text); margin:18px 0 10px; }
+  .team-member-row { display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--border); }
+  .team-member-row:last-child { border-bottom:none; }
+  .team-member-avatar { width:34px; height:34px; border-radius:50%; background:var(--bg); color:var(--primary); font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .team-member-name { font-size:14px; font-weight:700; color:var(--text); }
+  .team-member-sub { font-size:12px; color:var(--muted); margin-top:1px; }
+
   .status-box { border-radius:12px; padding:16px 20px; font-size:14px; font-weight:600; text-align:center; }
   .status-success { background:#f0fdf4; color:#166534; border:1.5px solid #bbf7d0; }
   .status-error   { background:#fff5f5; color:#c81e1e; border:1.5px solid #fecaca; }
@@ -138,6 +160,14 @@
   <div class="header-desc">Nhập mã nhân viên để xem xe di chuyển, khách sạn, số phòng và các thông tin khác của bạn</div>
 </div>
 
+<div class="tab-nav hidden" id="tab-nav">
+  <button class="tab-nav-btn active" id="tab-btn-personal" onclick="switchTab('personal')">🔍 Tra cứu cá nhân</button>
+  <button class="tab-nav-btn" id="tab-btn-team" onclick="switchTab('team')">👥 Danh sách theo đội</button>
+</div>
+
+<!-- TAB: TRA CỨU CÁ NHÂN -->
+<div id="panel-personal">
+
 <!-- BƯỚC 1: NHẬP MSNV -->
 <div class="card" id="step-msnv">
   <div class="card-title">Tra cứu theo mã nhân viên</div>
@@ -157,7 +187,26 @@
     <div class="result-msnv" id="result-msnv-line">—</div>
   </div>
   <div class="lookup-list" id="lookup-list"></div>
+  <div class="own-team-banner hidden" id="own-team-banner">
+    <div class="own-team-text">Đội của bạn: <b id="own-team-name">—</b></div>
+    <button class="btn btn-primary btn-sm" onclick="viewOwnTeam()">Xem danh sách đội →</button>
+  </div>
   <button class="btn btn-outline btn-full" style="margin-top:20px" onclick="resetLookup()">🔄 Tra cứu mã khác</button>
+</div>
+
+</div>
+
+<!-- TAB: DANH SÁCH THEO ĐỘI -->
+<div id="panel-team" class="hidden">
+  <div class="card">
+    <div class="card-title">Chọn đội cần xem</div>
+    <div id="team-select-status"></div>
+    <div class="team-select-row" id="team-select-row"></div>
+  </div>
+  <div class="card hidden" id="team-result-card">
+    <div class="team-members-title" id="team-members-title">—</div>
+    <div id="team-members-list"></div>
+  </div>
 </div>
 
 <div class="footer-links">Có sai sót thông tin? Vui lòng liên hệ BTC để được hỗ trợ.</div>
@@ -169,6 +218,8 @@
   var EVENT_ID     = getQueryParam('event');
   var PREFILL_MSNV = getQueryParam('msnv');
   var SESSION_TOKEN = Math.random().toString(36).substr(2,12) + Date.now().toString(36);
+  var teamFeatureEnabled = false;
+  var teamOptionsLoaded  = false;
 
   window.addEventListener('DOMContentLoaded', function() {
     if (!EVENT_ID) {
@@ -184,6 +235,15 @@
     }).catch(function () { hideBootOverlay(); });
     // An toàn: nếu API quá chậm hoặc treo, vẫn tự ẩn overlay sau 6s để không chặn người dùng mãi
     setTimeout(hideBootOverlay, 6000);
+    // Dò xem sự kiện có bật tính năng chia đội không — chỉ hiện tab "Danh sách
+    // theo đội" khi getTeamOptions trả về success (tức ColDoi đã được khai báo).
+    callApi('getTeamOptions', { eventId: EVENT_ID }).then(function (res) {
+      if (res.success) {
+        teamFeatureEnabled = true;
+        document.getElementById('tab-nav').classList.remove('hidden');
+        renderTeamOptions(res.data);
+      }
+    }).catch(function () {});
     if (PREFILL_MSNV && PREFILL_MSNV !== '') {
       var input = document.getElementById('msnv-input');
       if (input) { input.value = PREFILL_MSNV; setTimeout(lookupInfo, 300); }
@@ -265,7 +325,22 @@
     }
     hide('step-msnv');
     show('step-result');
+
+    var teamBanner = document.getElementById('own-team-banner');
+    if (data.coDoi && data.doi) {
+      document.getElementById('own-team-name').textContent = data.doi;
+      teamBanner.classList.remove('hidden');
+    } else {
+      teamBanner.classList.add('hidden');
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function viewOwnTeam() {
+    var doi = document.getElementById('own-team-name').textContent;
+    switchTab('team');
+    loadTeamMembers(doi);
   }
 
   function resetLookup() {
@@ -287,6 +362,78 @@
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* ---------- TAB: DANH SÁCH THEO ĐỘI ---------- */
+
+  function switchTab(name) {
+    var isPersonal = name === 'personal';
+    document.getElementById('panel-personal').classList.toggle('hidden', !isPersonal);
+    document.getElementById('panel-team').classList.toggle('hidden', isPersonal);
+    document.getElementById('tab-btn-personal').classList.toggle('active', isPersonal);
+    document.getElementById('tab-btn-team').classList.toggle('active', !isPersonal);
+    if (!isPersonal && teamFeatureEnabled && !teamOptionsLoaded) {
+      callApi('getTeamOptions', { eventId: EVENT_ID }).then(function (res) {
+        if (res.success) renderTeamOptions(res.data);
+      });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function renderTeamOptions(teams) {
+    teamOptionsLoaded = true;
+    var wrap = document.getElementById('team-select-row');
+    if (!teams || !teams.length) {
+      document.getElementById('team-select-status').innerHTML =
+        '<div class="status-box status-info">Chưa có ai được xếp đội. Vui lòng quay lại sau.</div>';
+      wrap.innerHTML = '';
+      return;
+    }
+    document.getElementById('team-select-status').innerHTML = '';
+    wrap.innerHTML = teams.map(function (t) {
+      return '<button class="team-chip" data-doi="' + escapeHtml(t.doi) + '" onclick="loadTeamMembers(this.getAttribute(\'data-doi\'))">' +
+        escapeHtml(t.doi) + ' <span class="team-chip-count">(' + t.soLuong + ')</span>' +
+      '</button>';
+    }).join('');
+  }
+
+  function loadTeamMembers(doi) {
+    // Đánh dấu chip đang chọn (nếu chip đó có mặt trong danh sách hiện tại)
+    var chips = document.querySelectorAll('.team-chip');
+    chips.forEach(function (c) { c.classList.toggle('selected', c.getAttribute('data-doi') === doi); });
+
+    var card = document.getElementById('team-result-card');
+    card.classList.remove('hidden');
+    document.getElementById('team-members-title').textContent = 'Đang tải danh sách ' + doi + '...';
+    document.getElementById('team-members-list').innerHTML = '';
+
+    callApi('getTeamMembers', { eventId: EVENT_ID, doi: doi }).then(function (res) {
+      if (!res.success) {
+        document.getElementById('team-members-title').textContent = doi;
+        document.getElementById('team-members-list').innerHTML =
+          '<div class="status-box status-error">' + escapeHtml(res.error || 'Không tải được danh sách.') + '</div>';
+        return;
+      }
+      var members = res.data.members || [];
+      document.getElementById('team-members-title').textContent = res.data.doi + ' — ' + members.length + ' người';
+      if (!members.length) {
+        document.getElementById('team-members-list').innerHTML = '<div class="lookup-empty-state">Chưa có ai trong đội này.</div>';
+        return;
+      }
+      document.getElementById('team-members-list').innerHTML = members.map(function (m) {
+        var sub = [m.chucDanh, m.phongBan].filter(Boolean).join(' · ');
+        return '<div class="team-member-row">' +
+          '<div class="team-member-avatar">' + ((m.hoTen || '?').trim().charAt(0).toUpperCase() || '?') + '</div>' +
+          '<div><div class="team-member-name">' + escapeHtml(m.hoTen || '(Chưa rõ tên)') + '</div>' +
+          (sub ? '<div class="team-member-sub">' + escapeHtml(sub) + '</div>' : '') + '</div>' +
+        '</div>';
+      }).join('');
+      window.scrollTo({ top: document.getElementById('team-result-card').offsetTop - 12, behavior: 'smooth' });
+    }).catch(function (err) {
+      document.getElementById('team-members-title').textContent = doi;
+      document.getElementById('team-members-list').innerHTML =
+        '<div class="status-box status-error">Lỗi kết nối: ' + escapeHtml(err.message) + '</div>';
+    });
   }
 </script>
 </body>
