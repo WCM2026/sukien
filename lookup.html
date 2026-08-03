@@ -465,8 +465,8 @@
   }
 
   // Bỏ dấu tiếng Việt + lowercase để nhận diện đúng "Đội trưởng"/"Đội phó"/
-  // "Chính ủy" dù Sheet ghi hoa/thường/khoảng trắng khác nhau — cùng logic
-  // chuẩn hoá với backend (normalizeNoDiacritics_ trong Code.gs).
+  // "Chính ủy" dù Sheet ghi hoa/thường/khoảng trắng khác nhau, hay có số thứ
+  // tự phía trước (vd "1. Đội trưởng") — cùng logic với roleRank_ trong Code.gs.
   function normalizeNoDiacritics(s) {
     s = String(s == null ? '' : s).trim().toLowerCase();
     s = s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
@@ -474,8 +474,11 @@
   }
   function roleBadgeHtml(vaiTro) {
     if (!vaiTro) return '';
-    var n = normalizeNoDiacritics(vaiTro);
-    var cls = n === 'doi truong' ? 'role-truong' : n === 'doi pho' ? 'role-pho' : n === 'chinh uy' ? 'role-uy' : 'role-other';
+    var n = normalizeNoDiacritics(vaiTro).replace(/^\d+\s*[.)\-:]?\s*/, '');
+    var cls = /^doi\s*truong\b/.test(n) ? 'role-truong'
+      : /^doi\s*pho\b/.test(n) ? 'role-pho'
+      : /^chinh\s*uy\b/.test(n) ? 'role-uy'
+      : 'role-other';
     return '<span class="role-badge ' + cls + '">' + escapeHtml(vaiTro) + '</span>';
   }
 </script>
