@@ -623,8 +623,15 @@
         <div class="colmap-field"><label>Cột Mũ (để trống nếu sự kiện này không có)</label><input id="cm-ColMu" placeholder="Để trống = không dùng"><div class="colmap-hint">Hệ thống ghi "Đã có" hoặc "Chưa có/Thất lạc" vào cột này — nên chọn 1 cột trống. Độc lập hoàn toàn với Size áo.</div></div>
       </div>
 
+      <div class="colmap-section-title">Tra cứu thông tin (trang công khai lookup.html)</div>
+      <div class="colmap-grid">
+        <div class="colmap-field"><label>Cột bắt đầu khối "Tra cứu" (để trống nếu sự kiện này không dùng)</label><input id="cm-ColTraCuuStart" placeholder="Để trống = không dùng"><div class="colmap-hint">Trang Tra cứu sẽ hiện TẤT CẢ các cột từ đây tới cột cuối cùng có dữ liệu trên Sheet (vd Xe di chuyển, Khách sạn, Số phòng...), lấy nhãn theo dòng tiêu đề bên dưới. Thêm/bớt/đổi tên cột thông tin trực tiếp trên Sheet — không cần sửa gì ở đây.</div></div>
+        <div class="colmap-field"><label>Dòng chứa tiêu đề của khối Tra cứu</label><input id="cm-ColTraCuuHeaderRow" placeholder="Để trống = tự lấy dòng ngay trên vùng dữ liệu"><div class="colmap-hint">Vd nếu dòng 1 của Sheet là tiêu đề (Số điện thoại, Khách sạn, Số phòng...) thì nhập 1.</div></div>
+      </div>
+
       <button class="btn btn-primary btn-full" style="margin-top:18px" id="save-cm-btn" onclick="admSaveColumnMap()">💾 Lưu cấu trúc cột</button>
       <p style="font-size:12px;color:var(--muted);margin-top:10px">Sau khi lưu, vào lại tab "Câu hỏi khảo sát" hoặc trang Đăng ký để kiểm tra dữ liệu đã đọc đúng chưa.</p>
+      <p id="lookup-preview-link" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
     </div>
   </div>
 
@@ -1715,10 +1722,23 @@
         document.getElementById('cm-ColSizeQuan').value = c.ColSizeQuan || '';
         document.getElementById('cm-ColEmail').value = c.ColEmail || '';
         document.getElementById('cm-ColMu').value = c.ColMu || '';
+        document.getElementById('cm-ColTraCuuStart').value = c.ColTraCuuStart || '';
+        document.getElementById('cm-ColTraCuuHeaderRow').value = c.ColTraCuuHeaderRow || '';
+        admRenderLookupPreviewLink(c.ColTraCuuStart);
       })
       .catch(function (err) {
         admShowStatus('❌ Lỗi tải cấu trúc cột: ' + err.message, false);
       });
+  }
+
+  // Hiện link xem trước trang Tra cứu công khai — chỉ hiện khi sự kiện đã bật
+  // (đã khai báo ColTraCuuStart), giống cách survey-preview-link hoạt động.
+  function admRenderLookupPreviewLink(colTraCuuStart) {
+    var el = document.getElementById('lookup-preview-link');
+    if (!el) return;
+    if (!colTraCuuStart) { el.innerHTML = 'Tính năng tra cứu đang TẮT cho sự kiện này (chưa khai báo "Cột bắt đầu khối Tra cứu" ở trên).'; return; }
+    var url = admFRONTEND_BASE_URL + '/lookup.html?event=' + encodeURIComponent(admCurrentEventId);
+    el.innerHTML = 'Link trang Tra cứu công khai: <a href="' + url + '" target="_blank">' + url + '</a>';
   }
 
   function admSaveColumnMap() {
@@ -1734,7 +1754,9 @@
       ColSizeAo: document.getElementById('cm-ColSizeAo').value.trim(),
       ColSizeQuan: document.getElementById('cm-ColSizeQuan').value.trim(),
       ColEmail: document.getElementById('cm-ColEmail').value.trim(),
-      ColMu: document.getElementById('cm-ColMu').value.trim()
+      ColMu: document.getElementById('cm-ColMu').value.trim(),
+      ColTraCuuStart: document.getElementById('cm-ColTraCuuStart').value.trim(),
+      ColTraCuuHeaderRow: document.getElementById('cm-ColTraCuuHeaderRow').value.trim()
     };
     var btn = document.getElementById('save-cm-btn');
     btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
@@ -1743,6 +1765,7 @@
         btn.innerHTML = '💾 Lưu cấu trúc cột'; btn.disabled = false;
         if (res.success) {
           admShowStatus('✅ Đã lưu cấu trúc cột cho sự kiện này.', true);
+          admRenderLookupPreviewLink(payload.ColTraCuuStart);
           callApi('getEventsForClient', { adminKey: admADMIN_KEY_VALUE }).then(function (r) { if (r.success) admEVENTS = r.data.slice().reverse(); });
         } else {
           admShowStatus('❌ ' + res.error, false);

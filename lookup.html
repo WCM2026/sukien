@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tra Cứu Thông Tin</title>
+<script src="api.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap');
+  :root {
+    /* Giá trị mặc định — sẽ được ghi đè bằng JS ngay khi trang load xong (xem hàm applyTheme) */
+    --primary: #E2231A; --primary-dark: #B01810;
+    --success: #0e9f6e; --danger: #f05252; --warning: #e3a008;
+    --bg: #faf6f5; --card: #ffffff; --border: #e2e8f0;
+    --text: #1e293b; --muted: #64748b; --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); min-height: 100vh; padding: 0 0 48px; color: var(--text); -webkit-text-size-adjust: 100%; }
+  .page-center { width: 100%; max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; align-items: stretch; padding: 0 16px; }
+
+  .top-band {
+    position: relative;
+    width: 100%;
+    background:
+      radial-gradient(ellipse 140% 100% at 15% -20%, rgba(255,255,255,.16) 0%, transparent 55%),
+      linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+    padding: 16px 10px;
+    text-align: center;
+    box-shadow: 0 6px 16px -10px rgba(176,24,16,.5);
+    overflow: hidden;
+  }
+  .top-band::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 1px, transparent 14px);
+    pointer-events: none;
+  }
+  .top-band-logo { position: relative; width: auto; height: 76px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.18)); }
+
+  .event-brand { width: 100%; text-align: center; padding: 28px 16px 4px; animation: brandIn .55s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes brandIn { from{opacity:0;transform:translateY(10px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .event-brand-logo-wrap {
+    display: flex; justify-content: center; align-items: center; margin: 0 auto 14px; min-height: 1px;
+    width: fit-content; max-width: 100%;
+  }
+  .event-brand-logo { width: auto; max-width: 250px; height: auto; max-height: 92px; object-fit: contain; display: block; animation: logoBreathe 4.5s ease-in-out infinite; }
+  @keyframes logoBreathe { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
+  .event-brand-fallback { font-size: 22px; font-weight: 800; color: var(--primary); letter-spacing: -.2px; }
+  .event-brand-program {
+    display: inline-block; color: var(--primary-dark); font-size: 12.5px; font-weight: 800;
+    margin-top: 2px; letter-spacing: 1.2px; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 999px; background: rgba(226,35,26,.08);
+  }
+
+  .header { width: 100%; text-align: center; margin: 16px 0 14px; animation: brandIn .55s cubic-bezier(.16,1,.3,1) .08s both; }
+  .header h1 { font-size: 23px; font-weight: 800; line-height: 1.2; letter-spacing: -.3px; }
+  .header h1 span { color: var(--primary); }
+  .header-desc { color: var(--muted); margin-top: 6px; font-size: 13px; line-height: 1.6; }
+
+  .card { width:100%; background:var(--card); border:1px solid rgba(0,0,0,.04); border-radius:var(--radius); box-shadow:0 2px 8px rgba(0,0,0,.04), 0 12px 32px -12px rgba(0,0,0,.10); padding:28px 24px; margin-bottom:12px; animation:fadeUp .4s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .card-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:16px; }
+
+  .input-group { display:flex; gap:10px; }
+  .input-field { flex:1; padding:14px 16px; border:1.5px solid var(--border); border-radius:12px; font-family:inherit; font-size:16px; font-weight:600; color:var(--text); transition:border-color .15s, box-shadow .15s; outline:none; letter-spacing:1px; background:#fff; }
+  .input-field:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(226,35,26,.10); }
+  .input-field::placeholder { font-weight:400; letter-spacing:0; color:#aaa; }
+
+  .btn { padding:14px 24px; border:none; border-radius:12px; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; transition:transform .15s, box-shadow .15s, background .15s; display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; }
+  .btn:active { transform:scale(.97); }
+  .btn-primary { background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; box-shadow:0 6px 16px -6px rgba(226,35,26,.55); }
+  .btn-primary:hover { box-shadow:0 8px 20px -6px rgba(226,35,26,.65); }
+  .btn-outline { background:white; color:var(--text); border:1.5px solid var(--border); }
+  .btn-outline:hover { border-color:var(--primary); color:var(--primary); }
+  .btn-full { width:100%; }
+  .btn:disabled { opacity:.6; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .result-person { text-align:center; padding-bottom:18px; margin-bottom:18px; border-bottom:1px solid var(--border); }
+  .result-avatar { width:52px; height:52px; border-radius:50%; background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; font-size:20px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; }
+  .result-name { font-size:17px; font-weight:800; color:var(--text); }
+  .result-msnv { font-size:12.5px; color:var(--muted); margin-top:2px; letter-spacing:.4px; }
+
+  .lookup-list { display:flex; flex-direction:column; gap:10px; }
+  .lookup-item { background:var(--bg); border-radius:10px; padding:12px 14px; }
+  .lookup-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); margin-bottom:4px; }
+  .lookup-value { font-size:15px; font-weight:700; color:var(--text); word-break:break-word; }
+  .lookup-value.empty { color:#c2c9d2; font-weight:600; }
+  .lookup-empty-state { text-align:center; color:var(--muted); font-size:13.5px; padding:8px 0; }
+
+  .status-box { border-radius:12px; padding:16px 20px; font-size:14px; font-weight:600; text-align:center; }
+  .status-success { background:#f0fdf4; color:#166534; border:1.5px solid #bbf7d0; }
+  .status-error   { background:#fff5f5; color:#c81e1e; border:1.5px solid #fecaca; }
+  .status-info    { background:var(--bg); color:#9b1c1c; border:1.5px solid #fca5a5; }
+  .status-warning { background:#fffbeb; color:#92400e; border:1.5px solid #fde68a; }
+
+  .hidden { display:none!important; }
+  .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:white; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  #boot-overlay {
+    position:fixed; inset:0; background:var(--bg); z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    transition:opacity .3s ease;
+  }
+  #boot-overlay.boot-hide { opacity:0; pointer-events:none; }
+  .boot-mascot { width:256px; height:256px; max-width:60vw; max-height:60vw; object-fit:contain; animation:bootMascotZoom 1.6s ease-in-out infinite; filter:drop-shadow(0 10px 22px rgba(176,24,16,.18)); }
+  @keyframes bootMascotZoom { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+  .boot-spinner { width:26px; height:26px; border:3px solid rgba(226,35,26,.18); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+  .boot-text { font-size:13px; color:var(--muted); font-weight:600; }
+
+  .footer-links { text-align:center; padding:14px 0 4px; font-size:12px; color:var(--muted); }
+
+  @media(max-width:480px){
+    .card{padding:20px 16px}
+  }
+</style>
+</head>
+<body>
+<div id="boot-overlay">
+  <img class="boot-mascot" src="https://s3.hn-2.cloud.cmctelecom.vn/rop/prod/UploadFile/2026/06/30/20260630144839679671baa808.png" alt="Đang tải">
+  <div class="boot-spinner"></div>
+  <div class="boot-text">Đang tải thông tin sự kiện...</div>
+</div>
+<div class="top-band">
+  <img class="top-band-logo" src="https://ops.winmart.vn/assets/img/logo/logo.png" alt="WinCommerce">
+</div>
+
+<div class="event-brand">
+  <div class="event-brand-logo-wrap" id="logo-wrap"></div>
+  <div class="event-brand-program hidden" id="program-name"></div>
+</div>
+
+<div class="page-center">
+
+<div class="header">
+  <h1>Tra Cứu <span>Thông Tin</span></h1>
+  <div class="header-desc">Nhập mã nhân viên để xem xe di chuyển, khách sạn, số phòng và các thông tin khác của bạn</div>
+</div>
+
+<!-- BƯỚC 1: NHẬP MSNV -->
+<div class="card" id="step-msnv">
+  <div class="card-title">Tra cứu theo mã nhân viên</div>
+  <div class="input-group">
+    <input type="text" id="msnv-input" class="input-field" placeholder="Nhập mã nhân viên..." maxlength="20"
+      onkeydown="if(event.key==='Enter') lookupInfo()">
+    <button class="btn btn-primary" onclick="lookupInfo()" id="lookup-btn">🔍 Tìm</button>
+  </div>
+  <div id="lookup-status" style="margin-top:12px"></div>
+</div>
+
+<!-- BƯỚC 2: KẾT QUẢ -->
+<div class="card hidden" id="step-result">
+  <div class="result-person">
+    <div class="result-avatar" id="result-avatar">?</div>
+    <div class="result-name" id="result-name">—</div>
+    <div class="result-msnv" id="result-msnv-line">—</div>
+  </div>
+  <div class="lookup-list" id="lookup-list"></div>
+  <button class="btn btn-outline btn-full" style="margin-top:20px" onclick="resetLookup()">🔄 Tra cứu mã khác</button>
+</div>
+
+<div class="footer-links">Có sai sót thông tin? Vui lòng liên hệ BTC để được hỗ trợ.</div>
+
+</div>
+
+<script>
+  // EVENT_ID/PREFILL_MSNV đọc từ query string, vd lookup.html?event=hotram2026&msnv=NV001
+  var EVENT_ID     = getQueryParam('event');
+  var PREFILL_MSNV = getQueryParam('msnv');
+  var SESSION_TOKEN = Math.random().toString(36).substr(2,12) + Date.now().toString(36);
+
+  window.addEventListener('DOMContentLoaded', function() {
+    if (!EVENT_ID) {
+      hideBootOverlay();
+      document.querySelector('.page-center').innerHTML =
+        '<div class="card"><div class="status-box status-error">Không xác định được sự kiện. ' +
+        'Link thiếu hoặc sai tham số <code>event</code>. Vui lòng dùng đúng link BTC cung cấp.</div></div>';
+      return;
+    }
+    callApi('getConfigForClient', { eventId: EVENT_ID }).then(function (res) {
+      applyTheme(res);
+      hideBootOverlay();
+    }).catch(function () { hideBootOverlay(); });
+    // An toàn: nếu API quá chậm hoặc treo, vẫn tự ẩn overlay sau 6s để không chặn người dùng mãi
+    setTimeout(hideBootOverlay, 6000);
+    if (PREFILL_MSNV && PREFILL_MSNV !== '') {
+      var input = document.getElementById('msnv-input');
+      if (input) { input.value = PREFILL_MSNV; setTimeout(lookupInfo, 300); }
+    }
+  });
+
+  function hideBootOverlay() {
+    var ov = document.getElementById('boot-overlay');
+    if (!ov) return;
+    ov.classList.add('boot-hide');
+    setTimeout(function () { ov.style.display = 'none'; }, 300);
+  }
+
+  function applyTheme(res) {
+    if (!res || !res.success) return;
+    var cfg = res.data;
+    var root = document.documentElement.style;
+    if (cfg.MauChuDao) root.setProperty('--primary', cfg.MauChuDao);
+    if (cfg.MauChuDaoDam) root.setProperty('--primary-dark', cfg.MauChuDaoDam);
+    document.title = 'Tra Cứu Thông Tin — ' + (cfg.TenSuKien || '');
+
+    var logoWrap = document.getElementById('logo-wrap');
+    if (cfg.Logo) {
+      logoWrap.innerHTML = '<img class="event-brand-logo" src="' + cfg.Logo + '" alt="' + (cfg.TenSuKien||'') + '">';
+      logoWrap.querySelector('img').onerror = function () {
+        logoWrap.innerHTML = '<div class="event-brand-fallback">' + (cfg.TenNgan || cfg.TenSuKien || '') + '</div>';
+      };
+    } else {
+      logoWrap.innerHTML = '<div class="event-brand-fallback">' + (cfg.TenNgan || cfg.TenSuKien || '') + '</div>';
+    }
+
+    var programEl = document.getElementById('program-name');
+    if (cfg.TenChuongTrinh) { programEl.textContent = cfg.TenChuongTrinh; programEl.classList.remove('hidden'); }
+    else { programEl.classList.add('hidden'); }
+  }
+
+  function lookupInfo() {
+    var msnv = document.getElementById('msnv-input').value.trim();
+    if (!msnv) { showStatus('lookup-status','Vui lòng nhập mã nhân viên','warning'); return; }
+    if (/^\d+$/.test(msnv)) { msnv = String(parseInt(msnv,10)); document.getElementById('msnv-input').value = msnv; }
+    var btn = document.getElementById('lookup-btn');
+    btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+    document.getElementById('lookup-status').innerHTML = '';
+    callApi('traCuuThongTin', { eventId: EVENT_ID, msnv: msnv, sessionToken: SESSION_TOKEN })
+      .then(onLookupResult)
+      .catch(function(err) {
+        showStatus('lookup-status','Lỗi kết nối: '+err.message,'error');
+        btn.innerHTML = '🔍 Tìm'; btn.disabled = false;
+      });
+  }
+
+  function onLookupResult(res) {
+    var btn = document.getElementById('lookup-btn');
+    btn.innerHTML = '🔍 Tìm'; btn.disabled = false;
+    if (!res.success) {
+      if (res.locked) {
+        showStatus('lookup-status','Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau ít phút hoặc liên hệ BTC.','error');
+      } else {
+        showStatus('lookup-status', res.error || 'Không tìm thấy thông tin.', 'error');
+      }
+      return;
+    }
+    var data = res.data;
+    document.getElementById('result-name').textContent = data.hoTen || '(Không có tên)';
+    document.getElementById('result-msnv-line').textContent = 'MSNV: ' + data.msnv;
+    document.getElementById('result-avatar').textContent = (data.hoTen || '?').trim().charAt(0).toUpperCase() || '?';
+
+    var listEl = document.getElementById('lookup-list');
+    if (!data.items || !data.items.length) {
+      listEl.innerHTML = '<div class="lookup-empty-state">Chưa có thông tin nào được cập nhật cho bạn. Vui lòng thử lại sau hoặc liên hệ BTC.</div>';
+    } else {
+      listEl.innerHTML = data.items.map(function (it) {
+        var hasVal = it.value && String(it.value).trim() !== '';
+        return '<div class="lookup-item">' +
+          '<div class="lookup-label">' + escapeHtml(it.label) + '</div>' +
+          '<div class="lookup-value' + (hasVal ? '' : ' empty') + '">' + (hasVal ? escapeHtml(it.value) : 'Chưa cập nhật') + '</div>' +
+        '</div>';
+      }).join('');
+    }
+    hide('step-msnv');
+    show('step-result');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetLookup() {
+    document.getElementById('msnv-input').value = '';
+    document.getElementById('lookup-status').innerHTML = '';
+    document.getElementById('lookup-list').innerHTML = '';
+    hide('step-result');
+    show('step-msnv');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function show(id){ document.getElementById(id).classList.remove('hidden'); }
+  function hide(id){ document.getElementById(id).classList.add('hidden'); }
+  function showStatus(id,msg,type){
+    var map = { success:'status-success', error:'status-error', warning:'status-warning', info:'status-info' };
+    document.getElementById(id).innerHTML = '<div class="status-box '+map[type]+'">'+msg+'</div>';
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+</script>
+</body>
+</html>
