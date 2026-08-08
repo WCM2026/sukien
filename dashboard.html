@@ -561,6 +561,45 @@
     </div>
 
     <div class="card">
+      <div class="card-title">📧 Mail cảm ơn tự động sau khảo sát</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Khi bật, hệ thống tự gửi 1 email cảm ơn (từ hộp mail TTNB qua Microsoft Graph) NGAY khi ai đó nộp khảo sát xong — kèm link ảnh/video ở trên nếu có. Chỉ gửi được cho người có mã nhân viên trong danh sách VÀ sự kiện đã khai báo cột Email (tab "Cấu trúc dữ liệu") — khách tự điền (không có MSNV) sẽ không nhận được mail này.</p>
+      <label class="toggle-row">
+        <input type="checkbox" id="cfg-MailCamOnTuDong">
+        <span>Tự động gửi mail cảm ơn ngay sau khi hoàn thành khảo sát</span>
+      </label>
+      <div class="field" style="margin-top:14px">
+        <label>Tiêu đề email</label>
+        <input id="cfg-MailCamOnTieuDe" placeholder="VD: Cảm ơn bạn đã tham gia khảo sát - {TenSuKien}">
+      </div>
+      <div class="mail-placeholder-row" style="margin:6px 0 10px">
+        <span style="font-size:12px;color:var(--muted);margin-right:4px">Chèn nhanh:</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgPlaceholder('cfg-MailCamOnTieuDe','{HoTen}')">{HoTen}</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgPlaceholder('cfg-MailCamOnTieuDe','{TenSuKien}')">{TenSuKien}</button>
+      </div>
+      <div class="field">
+        <label>Nội dung email</label>
+        <div class="rte-toolbar" data-target="cfg-MailCamOnNoiDung">
+          <button type="button" class="rte-btn" data-cmd="bold"><b>B</b></button>
+          <select class="rte-size">
+            <option value="">Cỡ chữ</option>
+            <option value="2">Nhỏ</option>
+            <option value="3">Vừa</option>
+            <option value="5">Lớn</option>
+            <option value="6">Rất lớn</option>
+          </select>
+        </div>
+        <div class="rte-editable" id="cfg-MailCamOnNoiDung" contenteditable="true" style="min-height:140px"></div>
+      </div>
+      <div class="mail-placeholder-row" style="margin-top:8px">
+        <span style="font-size:12px;color:var(--muted);margin-right:4px">Chèn nhanh vào nội dung:</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{HoTen}')">{HoTen}</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{TenSuKien}')">{TenSuKien}</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{NutAnhVideo}')" title="Chèn sẵn nút bấm đẹp trỏ tới link ảnh/video 1 và 2 ở trên">🖼️ {NutAnhVideo}</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">{NutAnhVideo} tự tạo nút bấm đẹp trỏ tới link ảnh/video khai báo ở phần trên (bỏ qua nút nào chưa có link) — không cần tự chèn tay HTML.</p>
+    </div>
+
+    <div class="card">
       <div class="card-title">Đồng phục (size áo / size quần / mũ)</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Bật/tắt cột Size áo, Size quần và Mũ ở tab "Cấu trúc dữ liệu" (mỗi sự kiện bật/tắt riêng, để trống cột nào thì bước tương ứng tự ẩn trên trang Đăng ký). Ảnh minh hoạ dưới đây (nếu có) sẽ hiện ngay phía trên các lựa chọn tương ứng trên trang Đăng ký, giúp nhân viên dễ hình dung trước khi chọn. Riêng size quần dùng bảng size tham khảo có sẵn trong trang Đăng ký, không cần ảnh minh hoạ riêng.</p>
       <div class="field-row">
@@ -752,8 +791,11 @@
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{PhongBan}')">{PhongBan}</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{ChucDanh}')">{ChucDanh}</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{LinkDangKy}')">{LinkDangKy}</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{TenSuKien}')">{TenSuKien}</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailPlaceholder('{NutAnhVideo}')" title="Nút bấm đẹp trỏ tới link ảnh/video khai báo ở tab Cấu hình giao diện">🖼️ {NutAnhVideo}</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertMailQrPlaceholder()">📱 QR cá nhân hoá</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="admInsertBeautifulTemplate()">✨ Chèn mẫu email đẹp có sẵn</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="admUseThankYouMailTemplate()" style="border-color:var(--primary);color:var(--primary)">🙏 Dùng mẫu Thư cảm ơn khảo sát</button>
         </div>
 
         <div class="field" style="margin-top:12px">
@@ -818,6 +860,12 @@
           <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-surveyed" checked onchange="admApplyMailFilters()"><span>Loại trừ người đã khảo sát</span></label>
           <label class="toggle-row-sm"><input type="checkbox" id="mf-exclude-noemail" checked disabled><span>Tự động loại trừ người không có email</span></label>
         </div>
+        <div class="mail-filter-row" style="margin-top:4px">
+          <label class="toggle-row-sm">
+            <input type="checkbox" id="mf-only-camon" onchange="admApplyMailFilters()">
+            <span><b>CHỈ</b> hiện & chọn người đã khảo sát nhưng <b>CHƯA nhận mail cảm ơn</b> (bỏ qua các bộ lọc phía trên) — dùng khi gửi bù thủ công</span>
+          </label>
+        </div>
         <div class="mail-col-filter-row">
           <input type="search" id="mfcol-msnv" name="mfcol-msnv" autocomplete="one-time-code" placeholder="Lọc MSNV..." oninput="admRenderMailCandidatesTable()">
           <input type="search" id="mfcol-hoten" name="mfcol-hoten" autocomplete="one-time-code" placeholder="Lọc họ tên..." oninput="admRenderMailCandidatesTable()">
@@ -845,6 +893,10 @@
       <div class="card">
         <div class="card-title">📤 Gửi</div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Nên gửi thử trước để kiểm tra định dạng/link, rồi mới gửi thật. Hệ thống gửi thật theo từng đợt nhỏ (khoảng 80 người/đợt) để tránh vượt giới hạn thời gian chạy của Google Apps Script — quá trình gửi hàng trăm/nghìn người có thể mất vài phút, đừng đóng tab trong lúc gửi.</p>
+        <label class="toggle-row-sm" style="margin-bottom:12px">
+          <input type="checkbox" id="mail-mark-camon">
+          <span>Đây là đợt gửi <b>Thư cảm ơn khảo sát</b> — đánh dấu để hệ thống nhớ ai đã nhận (tránh gửi trùng lần sau)</span>
+        </label>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn btn-outline" id="mail-test-btn" onclick="admSendTestMail()" style="white-space:nowrap">✉️ Gửi thử (về email admin)</button>
           <button class="btn btn-primary" id="mail-send-btn" onclick="admSendAllMail()" style="flex:1;min-width:220px">📨 Gửi cho người đã chọn</button>
@@ -2155,6 +2207,25 @@
     }
   }
 
+  // Chèn nhanh tiêu đề + nội dung email cảm ơn khảo sát đã cấu hình sẵn ở tab
+  // "Cấu hình giao diện" (cfg.MailCamOnTieuDe/MailCamOnNoiDung) vào khung soạn
+  // thư, đồng thời tự chuyển bộ lọc sang "chỉ người đã khảo sát nhưng chưa
+  // nhận mail cảm ơn" và tick sẵn "đánh dấu đợt gửi cảm ơn" — dùng khi BTC
+  // muốn GỬI BÙ thủ công (vd người tự động gửi lỗi, hoặc mới bật tính năng
+  // sau khi đã có người khảo sát từ trước).
+  function admUseThankYouMailTemplate() {
+    var c = admCurrentConfigCache || {};
+    if (document.getElementById('mail-body').textContent.trim() &&
+        !confirm('Nội dung đang soạn sẽ bị THAY THẾ bằng mẫu Thư cảm ơn khảo sát đã cấu hình. Tiếp tục?')) return;
+    document.getElementById('mail-subject').value = c.MailCamOnTieuDe || 'Cảm ơn bạn đã tham gia khảo sát - {TenSuKien}';
+    document.getElementById('mail-body').innerHTML = c.MailCamOnNoiDung ||
+      '<p>Chào {HoTen},</p><p>Cảm ơn bạn đã dành thời gian hoàn thành khảo sát!</p>{NutAnhVideo}<p>Trân trọng,<br>Ban Tổ chức</p>';
+    document.getElementById('mf-only-camon').checked = true;
+    document.getElementById('mail-mark-camon').checked = true;
+    admApplyMailFilters();
+    admShowStatus('✅ Đã chèn mẫu Thư cảm ơn khảo sát. Bộ lọc đã tự chuyển sang "chỉ người đã khảo sát nhưng chưa nhận mail cảm ơn".', true);
+  }
+
   function admReloadMailCandidates() {
     document.getElementById('mail-candidates-status').textContent = '⏳ Đang tải danh sách...';
     ['mfcol-msnv', 'mfcol-hoten', 'mfcol-phongban', 'mfcol-email'].forEach(function (id) {
@@ -2166,6 +2237,7 @@
       var el = document.getElementById(id);
       if (el) el.classList.toggle('active', id === 'mfs-all');
     });
+    document.getElementById('mf-only-camon').checked = false; // tránh dính trạng thái "gửi bù cảm ơn" từ lần tải trước
     callApi('adminGetMailCandidates', { eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE })
       .then(function (res) {
         if (!res.success) {
@@ -2187,15 +2259,22 @@
   // tick tay (manualOverride) — tránh việc chỉnh bộ lọc làm mất lựa chọn đặc
   // biệt admin đã tự chỉnh trong bảng.
   function admApplyMailFilters() {
+    var onlyCamOn = document.getElementById('mf-only-camon').checked;
     var excludeConfirmed = document.getElementById('mf-exclude-confirmed').checked;
     var excludeNotAttend = document.getElementById('mf-exclude-notattend').checked;
     var excludeSurveyed = document.getElementById('mf-exclude-surveyed').checked;
     admMailCandidates.forEach(function (c) {
       if (c.manualOverride) return;
       var sel = !!c.email;
-      if (sel && excludeConfirmed && c.daXacNhan) sel = false;
-      if (sel && excludeNotAttend && c.thamDu === false) sel = false;
-      if (sel && excludeSurveyed && c.daKhaoSat) sel = false;
+      if (onlyCamOn) {
+        // Chế độ "gửi bù cảm ơn": bỏ qua mọi bộ lọc khác, chỉ chọn đúng người
+        // đã khảo sát nhưng chưa từng ghi nhận nhận mail cảm ơn thành công.
+        sel = sel && c.daKhaoSat && !c.daNhanMailCamOn;
+      } else {
+        if (sel && excludeConfirmed && c.daXacNhan) sel = false;
+        if (sel && excludeNotAttend && c.thamDu === false) sel = false;
+        if (sel && excludeSurveyed && c.daKhaoSat) sel = false;
+      }
       c.selected = sel;
     });
     admRenderMailCandidatesTable();
@@ -2245,6 +2324,7 @@
       var badges = [];
       badges.push(!c.daXacNhan ? 'Chưa phản hồi' : (c.thamDu ? 'Có tham dự' : 'Không tham dự'));
       if (c.daKhaoSat) badges.push('Đã khảo sát');
+      if (c.daKhaoSat) badges.push(c.daNhanMailCamOn ? 'Đã nhận mail cảm ơn' : 'Chưa nhận mail cảm ơn');
       if (!c.email) badges.push('Thiếu email');
       return '<tr class="' + (c.selected ? '' : 'mail-row-excluded') + '">' +
         '<td><input type="checkbox" class="mail-candidate-checkbox" ' + (c.selected ? 'checked' : '') + (c.email ? '' : ' disabled') +
@@ -2337,7 +2417,9 @@
       document.getElementById('mail-send-result').innerHTML = '<span style="color:var(--danger)">Chưa chọn người nhận nào (có email).</span>';
       return;
     }
-    if (!confirm('Xác nhận GỬI THẬT email cho ' + selected.length + ' người' + (sharedLink ? ' (dùng LINK CHUNG, không cá nhân hoá)' : '') + '? Hành động này không thể thu hồi.')) return;
+    var markAsCamOn = document.getElementById('mail-mark-camon').checked;
+    if (!confirm('Xác nhận GỬI THẬT email cho ' + selected.length + ' người' + (sharedLink ? ' (dùng LINK CHUNG, không cá nhân hoá)' : '') +
+      (markAsCamOn ? ' — đánh dấu là đợt gửi Thư cảm ơn khảo sát' : '') + '? Hành động này không thể thu hồi.')) return;
 
     admMailSending = true;
     var btn = document.getElementById('mail-send-btn');
@@ -2369,7 +2451,7 @@
         'Đang gửi đợt ' + (bi + 1) + '/' + batches.length + ' (' + batches[bi].length + ' người)... đừng đóng tab.';
       callApi('adminSendInvitationEmails', {
         eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE,
-        payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL, msnvList: batches[bi], attachments: extracted.attachments, sharedLink: sharedLink }
+        payload: { subjectTemplate: subject, htmlTemplate: html, frontendBaseUrl: admFRONTEND_BASE_URL, msnvList: batches[bi], attachments: extracted.attachments, sharedLink: sharedLink, markAsCamOn: markAsCamOn }
       }).then(function (res) {
         if (!res.success) {
           document.getElementById('mail-send-result').innerHTML += '<br><span style="color:var(--danger)">❌ Đợt ' + (bi + 1) + ': ' + res.error + '</span>';
@@ -2598,20 +2680,52 @@
 
   /* ---------- CẤU HÌNH ---------- */
 
-  var admRTE_KEYS = ['MoTaDangKy', 'MoTaKhaoSat', 'ThankYouText'];
+  var admRTE_KEYS = ['MoTaDangKy', 'MoTaKhaoSat', 'ThankYouText', 'MailCamOnNoiDung'];
+  var admCFG_CHECKBOX_KEYS = ['ChoTuDien', 'MailCamOnTuDong'];
+
+  // admCurrentConfigCache: giữ lại bản Config vừa tải để tab Gửi mail dùng
+  // (nút "Dùng mẫu thư cảm ơn khảo sát" cần đọc MailCamOnTieuDe/NoiDung mà
+  // không phải gọi lại API riêng).
+  var admCurrentConfigCache = {};
 
   function admOnConfigLoaded(res) {
     if (!res.success) return;
     var c = res.data;
+    admCurrentConfigCache = c;
     Object.keys(c).forEach(function (key) {
-      if (key === 'ChoTuDien') return; // checkbox, xử lý riêng
+      if (admCFG_CHECKBOX_KEYS.indexOf(key) >= 0) return; // checkbox, xử lý riêng
       var el = document.getElementById('cfg-' + key);
       if (!el) return;
       if (admRTE_KEYS.indexOf(key) >= 0) el.innerHTML = c[key] || '';
       else el.value = c[key];
     });
-    document.getElementById('cfg-ChoTuDien').checked = !!c.ChoTuDien;
+    admCFG_CHECKBOX_KEYS.forEach(function (key) {
+      var el = document.getElementById('cfg-' + key);
+      if (el) el.checked = !!c[key];
+    });
     admSyncPicker('MauChuDao'); admSyncPicker('MauChuDaoDam');
+  }
+
+  // Chèn placeholder vào 1 ô input thường (không phải RTE), tại đúng vị trí
+  // con trỏ nếu có, hoặc nối vào cuối nếu ô đang không focus.
+  function admInsertCfgPlaceholder(inputId, text) {
+    var el = document.getElementById(inputId);
+    if (!el) return;
+    var start = el.selectionStart != null ? el.selectionStart : el.value.length;
+    var end = el.selectionEnd != null ? el.selectionEnd : el.value.length;
+    el.value = el.value.slice(0, start) + text + el.value.slice(end);
+    el.focus();
+    var pos = start + text.length;
+    try { el.setSelectionRange(pos, pos); } catch (e) {}
+  }
+
+  // Chèn placeholder vào cuối nội dung RTE của mail cảm ơn (đơn giản, nối
+  // cuối — người dùng có thể tự kéo thả lại vị trí trong ô contenteditable).
+  function admInsertCfgRtePlaceholder(text) {
+    var el = document.getElementById('cfg-MailCamOnNoiDung');
+    if (!el) return;
+    el.innerHTML += text;
+    el.focus();
   }
 
   function admSyncPicker(key) {
@@ -2646,11 +2760,11 @@
   }
 
   function admSaveConfig() {
-    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu'];
+    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu','MailCamOnTieuDe'];
     var payload = {};
     keys.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).value; });
     admRTE_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).innerHTML; });
-    payload.ChoTuDien = document.getElementById('cfg-ChoTuDien').checked ? 'true' : 'false';
+    admCFG_CHECKBOX_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).checked ? 'true' : 'false'; });
     var btn = document.getElementById('save-cfg-btn');
     btn.innerHTML = '⏳ Đang lưu...'; btn.disabled = true;
     callApi('adminSaveConfig', { eventId: admCurrentEventId, payload: payload, adminKey: admADMIN_KEY_VALUE })
