@@ -111,6 +111,11 @@
   .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
   .field input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;color:var(--text);outline:none}
   .field input:focus{border-color:var(--primary)}
+  .gb-upload{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border:2px dashed var(--border);border-radius:12px}
+  .gb-upload input[type=file]{flex:1;min-width:200px;font-family:inherit;font-size:13px}
+  .gb-preview{display:flex;gap:8px;overflow-x:auto;margin:6px 0 14px}
+  .gb-preview:empty{display:none}
+  .gb-preview img{height:120px;width:auto;border-radius:8px;border:1px solid var(--border);flex-shrink:0;background:#f1f5f9}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .toggle-row{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);cursor:pointer}
   .toggle-row-sm{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:8px}
@@ -606,6 +611,20 @@
         <div class="field"><label>URL ảnh minh hoạ size áo (tuỳ chọn)</label><input id="cfg-AnhMinhHoaAo" placeholder="https://..."></div>
         <div class="field"><label>URL ảnh minh hoạ mũ (tuỳ chọn)</label><input id="cfg-AnhMinhHoaMu" placeholder="https://..."></div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📖 Guidebook (tab "Guidebook" trên trang Tra cứu)</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Chọn file PDF Guidebook (hoặc nhiều ảnh, mỗi ảnh 1 trang) rồi bấm Tải lên — hệ thống tự tách PDF thành ảnh từng trang cho dễ xem trên điện thoại, lưu lên Google Drive (thư mục <code>Guidebook_&lt;mã sự kiện&gt;</code> cạnh Sheet data), điền sẵn các ô bên dưới và lưu cấu hình. Tải lên lần nữa sẽ <b>thay thế</b> guidebook cũ. Để trống cả 2 ô "Ảnh các trang" và "Link PDF" thì tab Guidebook tự ẩn.</p>
+      <div class="gb-upload">
+        <input type="file" id="gb-file-input" accept="application/pdf,image/*" multiple>
+        <button class="btn btn-primary btn-sm" id="gb-upload-btn" onclick="admUploadGuidebook()">⬆ Tải lên Guidebook</button>
+      </div>
+      <div id="gb-upload-status" style="font-size:12.5px;margin:8px 0 4px;color:var(--muted)"></div>
+      <div class="gb-preview" id="gb-preview"></div>
+      <div class="field"><label>Tiêu đề Guidebook</label><input id="cfg-GuidebookTieuDe" placeholder="VD: Guidebook Trekking Hàm Rồng"></div>
+      <div class="field"><label>Ảnh các trang — mỗi dòng 1 URL, đúng thứ tự trang</label><textarea id="cfg-GuidebookAnh" rows="4" style="width:100%;font-family:inherit;font-size:14px;padding:11px 14px;border:2px solid var(--border);border-radius:10px;resize:vertical;color:var(--text);outline:none" placeholder="Tự điền sau khi tải lên — hoặc dán tay URL ảnh, mỗi dòng 1 URL" oninput="admRenderGuidebookPreview()"></textarea></div>
+      <div class="field"><label>Link PDF để tải về (tuỳ chọn)</label><input id="cfg-GuidebookPdf" placeholder="Tự điền sau khi tải lên"></div>
     </div>
 
     <div class="card">
@@ -2705,6 +2724,8 @@
       if (el) el.checked = !!c[key];
     });
     admSyncPicker('MauChuDao'); admSyncPicker('MauChuDaoDam');
+    document.getElementById('gb-upload-status').textContent = '';
+    admRenderGuidebookPreview();
   }
 
   // Chèn placeholder vào 1 ô input thường (không phải RTE), tại đúng vị trí
@@ -2761,7 +2782,7 @@
   }
 
   function admSaveConfig() {
-    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu','MailCamOnTieuDe'];
+    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu','MailCamOnTieuDe','GuidebookTieuDe','GuidebookAnh','GuidebookPdf'];
     var payload = {};
     keys.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).value; });
     admRTE_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).innerHTML; });
@@ -2822,6 +2843,171 @@
     }, 400); // đợi ngắn để autofill của trình duyệt (nếu có) kịp chạy trước khi mình xoá
   });
 
+
+  /* ---------- GUIDEBOOK: tải PDF/ảnh lên Drive qua GAS ---------- */
+  // PDF.js chỉ tải khi admin thực sự chọn file PDF (không làm nặng trang Admin)
+  var ADM_PDFJS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  var ADM_GB_PAGE_WIDTH = 1240;   // px — đủ nét trên điện thoại, mỗi trang ~200-300KB
+  var ADM_GB_JPEG_QUALITY = 0.82;
+  var ADM_GB_MAX_PDF_MB = 20;     // PDF lớn hơn mức này chỉ upload ảnh, bỏ qua nút tải PDF
+  var admPdfjsPromise = null;
+
+  function admLoadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (!admPdfjsPromise) {
+      admPdfjsPromise = new Promise(function (resolve, reject) {
+        var sc = document.createElement('script');
+        sc.src = ADM_PDFJS_BASE + 'pdf.min.js';
+        sc.onload = function () {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = ADM_PDFJS_BASE + 'pdf.worker.min.js';
+          resolve(window.pdfjsLib);
+        };
+        sc.onerror = function () { admPdfjsPromise = null; reject(new Error('Không tải được thư viện đọc PDF — kiểm tra mạng rồi thử lại.')); };
+        document.head.appendChild(sc);
+      });
+    }
+    return admPdfjsPromise;
+  }
+
+  function admCanvasToJpegB64(canvas) {
+    return canvas.toDataURL('image/jpeg', ADM_GB_JPEG_QUALITY).split(',')[1];
+  }
+  function admNewWhiteCanvas(w, h) {
+    var c = document.createElement('canvas');
+    c.width = Math.round(w); c.height = Math.round(h);
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); // PDF/PNG nền trong suốt -> nền trắng khi ra JPG
+    return c;
+  }
+
+  async function admPdfToJpegs(file, onProgress) {
+    var lib = await admLoadPdfJs();
+    var pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+    var out = [];
+    for (var i = 1; i <= pdf.numPages; i++) {
+      onProgress('Đang tách trang ' + i + '/' + pdf.numPages + '...');
+      var page = await pdf.getPage(i);
+      var base = page.getViewport({ scale: 1 });
+      var vp = page.getViewport({ scale: ADM_GB_PAGE_WIDTH / base.width });
+      var canvas = admNewWhiteCanvas(vp.width, vp.height);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      out.push(admCanvasToJpegB64(canvas));
+      page.cleanup();
+    }
+    pdf.destroy();
+    return out;
+  }
+
+  function admImageToJpeg(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, ADM_GB_PAGE_WIDTH / img.naturalWidth);
+        var canvas = admNewWhiteCanvas(img.naturalWidth * scale, img.naturalHeight * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(admCanvasToJpegB64(canvas));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Không đọc được ảnh ' + file.name)); };
+      img.src = url;
+    });
+  }
+
+  function admFileToB64(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(',')[1]); };
+      r.onerror = function () { reject(new Error('Không đọc được file ' + file.name)); };
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function admUploadGuidebook() {
+    var input = document.getElementById('gb-file-input');
+    var statusEl = document.getElementById('gb-upload-status');
+    var btn = document.getElementById('gb-upload-btn');
+    var files = Array.prototype.slice.call(input.files || []);
+    function say(msg, color) { statusEl.style.color = color || 'var(--muted)'; statusEl.textContent = msg; }
+    if (!admCurrentEventId) { say('Chưa chọn sự kiện.', 'var(--danger)'); return; }
+    if (!files.length) { say('Hãy chọn file PDF hoặc ảnh trước.', 'var(--danger)'); return; }
+
+    var pdfs = files.filter(function (f) { return f.type === 'application/pdf' || /\.pdf$/i.test(f.name); });
+    var imgs = files.filter(function (f) { return /^image\//.test(f.type); });
+    if (pdfs.length > 1 || (pdfs.length && imgs.length)) { say('Chỉ chọn 1 file PDF, HOẶC nhiều ảnh (không trộn lẫn).', 'var(--danger)'); return; }
+
+    btn.disabled = true; btn.innerHTML = '⏳ Đang xử lý...';
+    try {
+      // 1) Chuẩn bị ảnh từng trang ngay trên trình duyệt
+      var pages;
+      if (pdfs.length) {
+        pages = await admPdfToJpegs(pdfs[0], say);
+      } else {
+        imgs.sort(function (a, b) { return a.name.localeCompare(b.name, 'vi', { numeric: true }); });
+        pages = [];
+        for (var k = 0; k < imgs.length; k++) {
+          say('Đang nén ảnh ' + (k + 1) + '/' + imgs.length + '...');
+          pages.push(await admImageToJpeg(imgs[k]));
+        }
+      }
+
+      // 2) Upload lần lượt từng trang (mỗi request nhỏ ~300KB, tránh quá tải GAS)
+      var urls = [];
+      for (var i = 0; i < pages.length; i++) {
+        say('Đang tải lên trang ' + (i + 1) + '/' + pages.length + '...');
+        var res = await callApi('adminUploadGuidebookFile', {
+          eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE,
+          payload: { fileName: 'trang-' + ('0' + (i + 1)).slice(-2) + '.jpg', mimeType: 'image/jpeg', base64: pages[i], clearOld: i === 0 }
+        });
+        if (!res.success) throw new Error(res.error || 'Upload thất bại ở trang ' + (i + 1));
+        urls.push(res.data.url);
+      }
+
+      // 3) Upload file PDF gốc cho nút "Tải PDF" (bỏ qua nếu quá lớn)
+      var pdfUrl = '', pdfNote = '';
+      if (pdfs.length) {
+        if (pdfs[0].size > ADM_GB_MAX_PDF_MB * 1024 * 1024) {
+          pdfNote = ' (PDF lớn hơn ' + ADM_GB_MAX_PDF_MB + 'MB nên không gắn nút tải PDF)';
+        } else {
+          say('Đang tải lên file PDF gốc...');
+          var pr = await callApi('adminUploadGuidebookFile', {
+            eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE,
+            payload: { fileName: pdfs[0].name, mimeType: 'application/pdf', base64: await admFileToB64(pdfs[0]), clearOld: false }
+          });
+          if (!pr.success) throw new Error(pr.error || 'Upload PDF thất bại');
+          pdfUrl = pr.data.url;
+        }
+      }
+
+      // 4) Điền form + lưu ngay 3 khoá Guidebook vào Config (server chỉ ghi
+      //    đè đúng các khoá gửi lên, không đụng tới cấu hình khác)
+      var titleEl = document.getElementById('cfg-GuidebookTieuDe');
+      if (!titleEl.value.trim()) titleEl.value = 'Guidebook';
+      document.getElementById('cfg-GuidebookAnh').value = urls.join('\n');
+      document.getElementById('cfg-GuidebookPdf').value = pdfUrl;
+      admRenderGuidebookPreview();
+      say('Đang lưu cấu hình...');
+      var sv = await callApi('adminSaveConfig', {
+        eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE,
+        payload: { GuidebookTieuDe: titleEl.value, GuidebookAnh: urls.join('\n'), GuidebookPdf: pdfUrl }
+      });
+      if (!sv.success) throw new Error(sv.error || 'Lưu cấu hình thất bại');
+      say('✅ Đã tải lên ' + urls.length + ' trang' + pdfNote + '. Trang Tra cứu sẽ hiện tab Guidebook khi tải lại.', 'var(--success)');
+      input.value = '';
+    } catch (err) {
+      say('❌ ' + err.message, 'var(--danger)');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '⬆ Tải lên Guidebook';
+    }
+  }
+
+  function admRenderGuidebookPreview() {
+    var wrap = document.getElementById('gb-preview');
+    var urls = document.getElementById('cfg-GuidebookAnh').value.split(/[\s|]+/).filter(Boolean);
+    wrap.innerHTML = urls.map(function (u, i) {
+      return '<img src="' + String(u).replace(/"/g, '&quot;') + '" alt="Trang ' + (i + 1) + '" loading="lazy">';
+    }).join('');
+  }
 </script>
 </div>
 </body>

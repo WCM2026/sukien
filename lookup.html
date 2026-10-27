@@ -94,7 +94,8 @@
   .btn-sm { padding:9px 14px; font-size:13px; border-radius:10px; }
 
   .tab-nav { display:flex; gap:8px; margin-bottom:14px; animation:fadeUp .4s ease .05s both; }
-  .tab-nav-btn { flex:1; padding:12px 10px; border-radius:12px; border:1.5px solid var(--border); background:#fff; color:var(--muted); font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s, color .15s; text-align:center; }
+  .tab-nav-btn { flex:1; min-width:0; padding:9px 4px 8px; border-radius:12px; border:1.5px solid var(--border); background:#fff; color:var(--muted); font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s, color .15s; text-align:center; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tab-ico { display:block; font-size:17px; line-height:1.2; margin-bottom:2px; }
   .tab-nav-btn.active { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; box-shadow:0 6px 16px -8px rgba(226,35,26,.5); }
 
   .team-select-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
@@ -151,6 +152,26 @@
   .agenda-item.is-next .agenda-dot { border-color:var(--primary); }
   @keyframes agendaPulse { 0%,100%{ box-shadow:0 0 0 3px rgba(226,35,26,.20); } 50%{ box-shadow:0 0 0 7px rgba(226,35,26,.06); } }
 
+  /* ---------- GUIDEBOOK ---------- */
+  .gb-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .gb-title { font-size:15px; font-weight:800; color:var(--text); line-height:1.35; }
+  .gb-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  .gb-pages { display:flex; flex-direction:column; gap:12px; }
+  .gb-page { position:relative; display:block; width:100%; padding:0; border:none; background:var(--bg); border-radius:12px; overflow:hidden; cursor:zoom-in; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 20px -12px rgba(0,0,0,.25); aspect-ratio:1240/1760; }
+  .gb-page img { display:block; width:100%; height:100%; object-fit:contain; }
+  .gb-page-num { position:absolute; right:8px; bottom:8px; background:rgba(15,23,42,.62); color:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; }
+  .gb-hint { text-align:center; font-size:12px; color:var(--muted); margin-top:10px; }
+
+  #gb-viewer { position:fixed; inset:0; z-index:10000; background:#0b0d12; display:flex; flex-direction:column; }
+  #gb-viewer.hidden { display:none!important; }
+  .gbv-bar { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; color:#fff; font-size:13px; font-weight:700; flex-shrink:0; }
+  .gbv-btn { background:rgba(255,255,255,.12); color:#fff; border:none; border-radius:10px; font-family:inherit; font-size:13px; font-weight:700; padding:8px 12px; cursor:pointer; }
+  .gbv-btn:disabled { opacity:.3; }
+  .gbv-stage { flex:1; overflow:auto; -webkit-overflow-scrolling:touch; display:flex; align-items:flex-start; justify-content:flex-start; }
+  .gbv-stage img { display:block; margin:auto; max-width:100%; max-height:100%; object-fit:contain; cursor:zoom-in; user-select:none; -webkit-user-drag:none; }
+  .gbv-stage.zoomed img { max-width:none; max-height:none; width:230%; margin:0; cursor:zoom-out; }
+  .gbv-nav { display:flex; gap:10px; justify-content:center; padding:10px 12px 16px; flex-shrink:0; }
+
   .status-box { border-radius:12px; padding:16px 20px; font-size:14px; font-weight:600; text-align:center; }
   .status-success { background:#f0fdf4; color:#166534; border:1.5px solid #bbf7d0; }
   .status-error   { background:#fff5f5; color:#c81e1e; border:1.5px solid #fecaca; }
@@ -203,9 +224,10 @@
 </div>
 
 <div class="tab-nav hidden" id="tab-nav">
-  <button class="tab-nav-btn active" id="tab-btn-personal" onclick="switchTab('personal')">🔍 Cá nhân</button>
-  <button class="tab-nav-btn hidden" id="tab-btn-team" onclick="switchTab('team')">👥 Theo đội</button>
-  <button class="tab-nav-btn hidden" id="tab-btn-agenda" onclick="switchTab('agenda')">📅 Agenda</button>
+  <button class="tab-nav-btn active" id="tab-btn-personal" onclick="switchTab('personal')"><span class="tab-ico">🔍</span>Cá nhân</button>
+  <button class="tab-nav-btn hidden" id="tab-btn-team" onclick="switchTab('team')"><span class="tab-ico">👥</span>Theo đội</button>
+  <button class="tab-nav-btn hidden" id="tab-btn-agenda" onclick="switchTab('agenda')"><span class="tab-ico">📅</span>Agenda</button>
+  <button class="tab-nav-btn hidden" id="tab-btn-guide" onclick="switchTab('guide')"><span class="tab-ico">📖</span>Guidebook</button>
 </div>
 
 <!-- TAB: TRA CỨU CÁ NHÂN -->
@@ -235,6 +257,7 @@
     <button class="btn btn-primary btn-sm" onclick="viewOwnTeam()">Xem danh sách đội →</button>
   </div>
   <button class="btn btn-outline btn-full hidden" style="margin-top:12px" id="view-agenda-btn" onclick="switchTab('agenda')">📅 Xem lịch trình sự kiện</button>
+  <button class="btn btn-outline btn-full hidden" style="margin-top:10px" id="view-guide-btn" onclick="switchTab('guide')">📖 Xem Guidebook</button>
   <button class="btn btn-outline btn-full" style="margin-top:20px" onclick="resetLookup()">🔄 Tra cứu mã khác</button>
 </div>
 
@@ -267,8 +290,37 @@
   </div>
 </div>
 
+<!-- TAB: GUIDEBOOK -->
+<div id="panel-guide" class="hidden">
+  <div class="card">
+    <div class="gb-head">
+      <div>
+        <div class="gb-title" id="gb-title">Guidebook</div>
+        <div class="gb-sub" id="gb-sub"></div>
+      </div>
+      <a class="btn btn-primary btn-sm hidden" style="white-space:nowrap;flex-shrink:0" id="gb-pdf-btn" href="#" target="_blank" rel="noopener" download>⬇ Tải PDF</a>
+    </div>
+    <div class="gb-pages" id="gb-pages"></div>
+    <div class="gb-hint hidden" id="gb-hint">Chạm vào trang để phóng to</div>
+  </div>
+</div>
+
 <div class="footer-links">Có sai sót thông tin? Vui lòng liên hệ BTC để được hỗ trợ.</div>
 
+</div>
+
+<!-- Trình xem Guidebook toàn màn hình: chạm ảnh để phóng to (trang này tắt
+     pinch-zoom qua meta viewport, nên phải tự làm zoom), vuốt trái/phải để lật trang -->
+<div id="gb-viewer" class="hidden">
+  <div class="gbv-bar">
+    <span id="gbv-count">1 / 1</span>
+    <button class="gbv-btn" onclick="closeGuideViewer()">✕ Đóng</button>
+  </div>
+  <div class="gbv-stage" id="gbv-stage"><img id="gbv-img" alt="" onclick="toggleGuideZoom()" onerror="guideImgFallback(this)"></div>
+  <div class="gbv-nav">
+    <button class="gbv-btn" id="gbv-prev" onclick="stepGuide(-1)">‹ Trang trước</button>
+    <button class="gbv-btn" id="gbv-next" onclick="stepGuide(1)">Trang sau ›</button>
+  </div>
 </div>
 
 <script>
@@ -290,6 +342,8 @@
   var agendaSelectedDay = -1;
   var myTeam = ''; // đội của người vừa tra cứu cá nhân — dùng để lọc/đánh dấu Agenda
   var agendaTimer = null;
+  var guidePages = [];   // URL ảnh từng trang Guidebook (từ Config: GuidebookAnh)
+  var guideIndex = 0;    // trang đang mở trong trình xem toàn màn hình
 
   window.addEventListener('DOMContentLoaded', function() {
     if (!EVENT_ID) {
@@ -301,6 +355,7 @@
     }
     callApi('getConfigForClient', { eventId: EVENT_ID }).then(function (res) {
       applyTheme(res);
+      setupGuidebook(res && res.success ? res.data : null);
       hideBootOverlay();
     }).catch(function () { hideBootOverlay(); });
     // An toàn: nếu API quá chậm hoặc treo, vẫn tự ẩn overlay sau 6s để không chặn người dùng mãi
@@ -401,6 +456,7 @@
     }
     myTeam = data.doi || '';
     document.getElementById('view-agenda-btn').classList.toggle('hidden', !(agendaData && agendaData.enabled));
+    document.getElementById('view-guide-btn').classList.toggle('hidden', document.getElementById('tab-btn-guide').classList.contains('hidden'));
     if (agendaData && agendaData.enabled) renderAgenda();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -453,7 +509,7 @@
   }
 
   function switchTab(name) {
-    ['personal', 'team', 'agenda'].forEach(function (t) {
+    ['personal', 'team', 'agenda', 'guide'].forEach(function (t) {
       document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
       document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
     });
@@ -696,6 +752,113 @@
     }
     document.getElementById('agenda-content').innerHTML = html;
   }
+  /* ---------- TAB: GUIDEBOOK ---------- */
+  // Cấu hình trong tab Config của Sheet sự kiện (sửa được ở trang Admin):
+  //   GuidebookTieuDe — tiêu đề hiển thị (tuỳ chọn)
+  //   GuidebookAnh    — URL ảnh từng trang, mỗi dòng 1 URL (hoặc ngăn bởi |).
+  //                     Chấp nhận đường dẫn tương đối tới file trong repo,
+  //                     vd guidebook/ap2027-sapa/trang-1.jpg
+  //   GuidebookPdf    — URL file PDF để tải về (tuỳ chọn)
+  // Không khai báo cả GuidebookAnh lẫn GuidebookPdf = ẩn tab Guidebook.
+  function setupGuidebook(cfg) {
+    if (!cfg) return;
+    guidePages = String(cfg.GuidebookAnh || '').split(/[\s|]+/).map(function (u) { return u.trim(); }).filter(Boolean);
+    var pdf = String(cfg.GuidebookPdf || '').trim();
+    if (!guidePages.length && !pdf) return;
+
+    document.getElementById('tab-nav').classList.remove('hidden');
+    document.getElementById('tab-btn-guide').classList.remove('hidden');
+    if (!document.getElementById('step-result').classList.contains('hidden')) {
+      document.getElementById('view-guide-btn').classList.remove('hidden');
+    }
+    document.getElementById('gb-title').textContent = cfg.GuidebookTieuDe || 'Guidebook';
+    document.getElementById('gb-sub').textContent = guidePages.length ? guidePages.length + ' trang' : '';
+
+    var pdfBtn = document.getElementById('gb-pdf-btn');
+    if (pdf) { pdfBtn.href = pdf; pdfBtn.classList.remove('hidden'); }
+
+    if (guidePages.length) {
+      // loading="lazy": trang 2 trở đi chỉ tải khi người xem cuộn tới, đỡ tốn 3G/4G
+      document.getElementById('gb-pages').innerHTML = guidePages.map(function (u, i) {
+        return '<button class="gb-page" onclick="openGuideViewer(' + i + ')" aria-label="Phóng to trang ' + (i + 1) + '">' +
+          '<img src="' + escapeHtml(u) + '" alt="Trang ' + (i + 1) + '"' + (i ? ' loading="lazy"' : '') + ' onerror="guideImgFallback(this)">' +
+          '<span class="gb-page-num">' + (i + 1) + ' / ' + guidePages.length + '</span></button>';
+      }).join('');
+      document.getElementById('gb-hint').classList.remove('hidden');
+    } else {
+      document.getElementById('gb-pages').innerHTML =
+        '<a class="btn btn-primary btn-full" href="' + escapeHtml(pdf) + '" target="_blank" rel="noopener">📖 Mở Guidebook (PDF)</a>';
+    }
+  }
+
+  // Ảnh upload qua trang Admin nằm trên Google Drive, link dạng
+  // lh3.googleusercontent.com/d/<id>=w1600. Nếu Google đổi/chặn kiểu link này
+  // thì thử lại 1 lần bằng link thumbnail chính thức của Drive.
+  function guideImgFallback(img) {
+    if (img.dataset.fb) return;
+    var m = String(img.src).match(/googleusercontent\.com\/d\/([\w-]+)/);
+    if (!m) return;
+    img.dataset.fb = '1';
+    img.src = 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600';
+  }
+
+  function openGuideViewer(i) {
+    guideIndex = i;
+    document.getElementById('gb-viewer').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    showGuidePage();
+  }
+  function closeGuideViewer() {
+    document.getElementById('gb-viewer').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  function stepGuide(d) {
+    var n = guideIndex + d;
+    if (n < 0 || n >= guidePages.length) return;
+    guideIndex = n;
+    showGuidePage();
+  }
+  function showGuidePage() {
+    var stage = document.getElementById('gbv-stage');
+    stage.classList.remove('zoomed');
+    stage.scrollTop = 0; stage.scrollLeft = 0;
+    var vimg = document.getElementById('gbv-img');
+    delete vimg.dataset.fb;
+    vimg.src = guidePages[guideIndex];
+    document.getElementById('gbv-count').textContent = (guideIndex + 1) + ' / ' + guidePages.length;
+    document.getElementById('gbv-prev').disabled = guideIndex === 0;
+    document.getElementById('gbv-next').disabled = guideIndex === guidePages.length - 1;
+  }
+  function toggleGuideZoom() {
+    var stage = document.getElementById('gbv-stage');
+    var zoomed = stage.classList.toggle('zoomed');
+    // Phóng to quanh giữa trang để người xem không bị "lạc" sang mép trái
+    if (zoomed) requestAnimationFrame(function () {
+      stage.scrollLeft = (stage.scrollWidth - stage.clientWidth) / 2;
+    });
+  }
+  // Vuốt trái/phải để lật trang (chỉ khi đang KHÔNG phóng to — lúc phóng to
+  // thì vuốt dùng để kéo xem các góc của trang)
+  (function () {
+    var x0 = null, y0 = null;
+    var stage = document.getElementById('gbv-stage');
+    stage.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) { x0 = null; return; }
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    stage.addEventListener('touchend', function (e) {
+      if (x0 === null || stage.classList.contains('zoomed')) return;
+      var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) stepGuide(dx < 0 ? 1 : -1);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (document.getElementById('gb-viewer').classList.contains('hidden')) return;
+      if (e.key === 'Escape') closeGuideViewer();
+      if (e.key === 'ArrowRight') stepGuide(1);
+      if (e.key === 'ArrowLeft') stepGuide(-1);
+    });
+  })();
 </script>
 </body>
 </html>
