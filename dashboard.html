@@ -666,12 +666,13 @@
       <div class="colmap-grid">
         <div class="colmap-field"><label>Cột bắt đầu khối "Tra cứu" (để trống nếu sự kiện này không dùng)</label><input id="cm-ColTraCuuStart" placeholder="Để trống = không dùng"><div class="colmap-hint">Trang Tra cứu sẽ hiện TẤT CẢ các cột từ đây tới cột cuối cùng có dữ liệu trên Sheet (vd Xe di chuyển, Khách sạn, Số phòng...), lấy nhãn theo dòng tiêu đề bên dưới. Thêm/bớt/đổi tên cột thông tin trực tiếp trên Sheet — không cần sửa gì ở đây.</div></div>
         <div class="colmap-field"><label>Dòng chứa tiêu đề của khối Tra cứu</label><input id="cm-ColTraCuuHeaderRow" placeholder="Để trống = tự lấy dòng ngay trên vùng dữ liệu"><div class="colmap-hint">Vd nếu dòng 1 của Sheet là tiêu đề (Số điện thoại, Khách sạn, Số phòng...) thì nhập 1.</div></div>
+        <div class="colmap-field" style="grid-column:1/-1"><label>📅 Agenda (tab "Agenda" trên lookup.html)</label><div class="colmap-hint">Không cần khai báo ở đây — chỉ cần tạo tab tên <b>Agenda</b> trong Sheet data của sự kiện, dòng 1 là tiêu đề, dữ liệu từ dòng 2 theo thứ tự cột: <b>A</b> Ngày · <b>B</b> Giờ bắt đầu · <b>C</b> Giờ kết thúc · <b>D</b> Nội dung (bắt buộc) · <b>E</b> Địa điểm · <b>F</b> Ghi chú · <b>G</b> Đội áp dụng (trống = tất cả; nhiều đội ngăn bởi dấu phẩy). Ô Ngày để trống = dùng lại ngày của dòng trên. Agenda được cache 10 phút — sửa xong muốn thấy ngay thì bấm nút "Xoá cache" ở mục Chia đội bên dưới.</div></div>
       </div>
 
       <div class="colmap-section-title">Chia đội (tab "Danh sách theo đội" trên lookup.html)</div>
       <div class="colmap-grid">
         <div class="colmap-field"><label>Cột Đội (để trống nếu sự kiện này không chia đội)</label><input id="cm-ColDoi" placeholder="Để trống = không dùng"><div class="colmap-hint">Cột ghi số/tên đội của từng người (vd "Đội 1", "1"...). Hệ thống tự gom danh sách các đội đang có dữ liệu — không cần khai báo tay từng đội. Trang Tra cứu sẽ hiện thêm tab để mọi người chọn đội và xem Họ tên/Phòng ban/Chức danh của cả đội (không hiện MSNV người khác). Dữ liệu đội được cache 30 phút để tải nhanh — nếu vừa sửa danh sách đội trên Sheet và muốn thấy ngay, bấm nút bên dưới.
-          <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="admClearTeamCache()" id="clear-team-cache-btn">🔄 Xoá cache danh sách đội</button>
+          <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="admClearTeamCache()" id="clear-team-cache-btn">🔄 Xoá cache danh sách đội &amp; Agenda</button>
         </div></div>
         <div class="colmap-field"><label>Cột Vai trò trong đội (để trống nếu không dùng)</label><input id="cm-ColVaiTro" placeholder="Để trống = không dùng"><div class="colmap-hint">Cột ghi vai trò của từng người trong đội (vd "Đội trưởng", "Đội phó", "Chính ủy"...). Danh sách đội trên trang Tra cứu sẽ tự xếp đúng 3 vai trò này lên đầu (theo thứ tự Đội trưởng → Đội phó → Chính ủy), các thành viên còn lại giữ nguyên thứ tự trên Sheet.</div></div>
       </div>
@@ -1808,12 +1809,12 @@
     btn.innerHTML = '⏳ Đang xoá...'; btn.disabled = true;
     callApi('adminClearTeamCache', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE })
       .then(function (res) {
-        btn.innerHTML = '🔄 Xoá cache danh sách đội'; btn.disabled = false;
-        if (res.success) admShowStatus('✅ Đã xoá cache — lượt tra cứu tiếp theo sẽ đọc dữ liệu đội mới nhất.', true);
+        btn.innerHTML = '🔄 Xoá cache danh sách đội &amp; Agenda'; btn.disabled = false;
+        if (res.success) admShowStatus('✅ Đã xoá cache — lượt tra cứu tiếp theo sẽ đọc dữ liệu đội và Agenda mới nhất.', true);
         else admShowStatus('❌ ' + res.error, false);
       })
       .catch(function (err) {
-        btn.innerHTML = '🔄 Xoá cache danh sách đội'; btn.disabled = false;
+        btn.innerHTML = '🔄 Xoá cache danh sách đội &amp; Agenda'; btn.disabled = false;
         admShowStatus('❌ Lỗi kết nối: ' + err.message, false);
       });
   }

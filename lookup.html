@@ -116,6 +116,41 @@
   .role-badge.role-uy { background:#eef2ff; color:#4338ca; }
   .role-badge.role-other { background:var(--bg); color:var(--muted); }
 
+  /* ---------- AGENDA ---------- */
+  .agenda-day-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:4px; scrollbar-width:none; }
+  .agenda-day-row::-webkit-scrollbar { display:none; }
+  .agenda-day-chip { flex-shrink:0; padding:9px 14px; border-radius:12px; border:1.5px solid var(--border); background:#fff; font-family:inherit; font-size:12.5px; font-weight:700; color:var(--text); cursor:pointer; text-align:center; line-height:1.35; transition:border-color .12s, background .12s; }
+  .agenda-day-chip small { display:block; font-size:10.5px; font-weight:600; color:var(--muted); }
+  .agenda-day-chip.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; }
+  .agenda-day-chip.selected small { color:rgba(255,255,255,.85); }
+  .agenda-filter { display:flex; align-items:center; justify-content:space-between; gap:10px; background:rgba(226,35,26,.06); border:1.5px solid rgba(226,35,26,.16); border-radius:12px; padding:10px 14px; margin:12px 0 4px; font-size:13px; font-weight:700; }
+  .agenda-filter b { color:var(--primary); }
+  .agenda-filter label { display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap; color:var(--muted); font-size:12.5px; }
+  .agenda-filter input { accent-color:var(--primary); width:16px; height:16px; }
+  .agenda-day-title { font-size:14px; font-weight:800; color:var(--text); margin:16px 0 6px; }
+  .agenda-list { position:relative; }
+  .agenda-item { position:relative; display:flex; gap:12px; padding:10px 0 14px; }
+  .agenda-time { width:54px; flex-shrink:0; text-align:right; padding-top:1px; }
+  .agenda-time-start { font-size:14px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; word-break:break-word; }
+  .agenda-time-end { font-size:11.5px; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .agenda-rail { position:relative; width:14px; flex-shrink:0; display:flex; justify-content:center; }
+  .agenda-rail::before { content:''; position:absolute; top:0; bottom:-14px; left:50%; width:2px; transform:translateX(-50%); background:var(--border); }
+  .agenda-item:last-child .agenda-rail::before { bottom:auto; height:14px; }
+  .agenda-dot { position:relative; z-index:1; margin-top:4px; width:12px; height:12px; border-radius:50%; background:#fff; border:2.5px solid var(--border); }
+  .agenda-body { flex:1; min-width:0; }
+  .agenda-title { font-size:14.5px; font-weight:700; color:var(--text); line-height:1.4; word-break:break-word; }
+  .agenda-meta { font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.5; word-break:break-word; }
+  .agenda-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .agenda-tag { font-size:10.5px; font-weight:800; letter-spacing:.3px; padding:2.5px 8px; border-radius:999px; background:var(--bg); color:var(--muted); }
+  .agenda-tag.mine { background:rgba(226,35,26,.12); color:var(--primary-dark); }
+  .agenda-tag.now { background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; text-transform:uppercase; }
+  .agenda-item.is-past .agenda-body, .agenda-item.is-past .agenda-time { opacity:.5; }
+  .agenda-item.is-past .agenda-dot { background:var(--border); }
+  .agenda-item.is-now .agenda-dot { border-color:var(--primary); background:var(--primary); box-shadow:0 0 0 4px rgba(226,35,26,.18); animation:agendaPulse 1.8s ease-in-out infinite; }
+  .agenda-item.is-now .agenda-body { background:rgba(226,35,26,.05); border-radius:10px; padding:8px 10px; margin:-8px 0 -8px -2px; }
+  .agenda-item.is-next .agenda-dot { border-color:var(--primary); }
+  @keyframes agendaPulse { 0%,100%{ box-shadow:0 0 0 3px rgba(226,35,26,.20); } 50%{ box-shadow:0 0 0 7px rgba(226,35,26,.06); } }
+
   .status-box { border-radius:12px; padding:16px 20px; font-size:14px; font-weight:600; text-align:center; }
   .status-success { background:#f0fdf4; color:#166534; border:1.5px solid #bbf7d0; }
   .status-error   { background:#fff5f5; color:#c81e1e; border:1.5px solid #fecaca; }
@@ -168,8 +203,9 @@
 </div>
 
 <div class="tab-nav hidden" id="tab-nav">
-  <button class="tab-nav-btn active" id="tab-btn-personal" onclick="switchTab('personal')">🔍 Tra cứu cá nhân</button>
-  <button class="tab-nav-btn" id="tab-btn-team" onclick="switchTab('team')">👥 Danh sách theo đội</button>
+  <button class="tab-nav-btn active" id="tab-btn-personal" onclick="switchTab('personal')">🔍 Cá nhân</button>
+  <button class="tab-nav-btn hidden" id="tab-btn-team" onclick="switchTab('team')">👥 Theo đội</button>
+  <button class="tab-nav-btn hidden" id="tab-btn-agenda" onclick="switchTab('agenda')">📅 Agenda</button>
 </div>
 
 <!-- TAB: TRA CỨU CÁ NHÂN -->
@@ -198,6 +234,7 @@
     <div class="own-team-text">Đội của bạn: <b id="own-team-name">—</b></div>
     <button class="btn btn-primary btn-sm" onclick="viewOwnTeam()">Xem danh sách đội →</button>
   </div>
+  <button class="btn btn-outline btn-full hidden" style="margin-top:12px" id="view-agenda-btn" onclick="switchTab('agenda')">📅 Xem lịch trình sự kiện</button>
   <button class="btn btn-outline btn-full" style="margin-top:20px" onclick="resetLookup()">🔄 Tra cứu mã khác</button>
 </div>
 
@@ -213,6 +250,20 @@
   <div class="card hidden" id="team-result-card">
     <div class="team-members-title" id="team-members-title">—</div>
     <div id="team-members-list"></div>
+  </div>
+</div>
+
+<!-- TAB: AGENDA -->
+<div id="panel-agenda" class="hidden">
+  <div class="card">
+    <div class="card-title">Lịch trình sự kiện</div>
+    <div id="agenda-status"></div>
+    <div class="agenda-day-row hidden" id="agenda-day-row"></div>
+    <div class="agenda-filter hidden" id="agenda-filter">
+      <span>Đội của bạn: <b id="agenda-my-team">—</b></span>
+      <label><input type="checkbox" id="agenda-only-mine" onchange="renderAgenda()"> Chỉ lịch của tôi</label>
+    </div>
+    <div id="agenda-content"></div>
   </div>
 </div>
 
@@ -233,6 +284,12 @@
   // dùng bấm quá nhanh trước khi prefetch kịp xong.
   var allTeamsData = null;
   var allTeamsPromise = null;
+  // agendaData: { enabled, days:[{label, iso, items:[{batDau,ketThuc,noiDung,diaDiem,ghiChu,doi}]}] }
+  // — tải 1 lần khi vào trang (song song với dữ liệu đội), cache ở client.
+  var agendaData = null;
+  var agendaSelectedDay = -1;
+  var myTeam = ''; // đội của người vừa tra cứu cá nhân — dùng để lọc/đánh dấu Agenda
+  var agendaTimer = null;
 
   window.addEventListener('DOMContentLoaded', function() {
     if (!EVENT_ID) {
@@ -252,6 +309,7 @@
     // overlay đang hiện) — nhờ vậy khi người dùng bấm sang tab "Danh sách theo
     // đội" hoặc đổi đội, dữ liệu đã sẵn sàng, không phải chờ gọi mạng nữa.
     prefetchTeamData();
+    prefetchAgenda();
     if (PREFILL_MSNV && PREFILL_MSNV !== '') {
       var input = document.getElementById('msnv-input');
       if (input) { input.value = PREFILL_MSNV; setTimeout(lookupInfo, 300); }
@@ -341,6 +399,9 @@
     } else {
       teamBanner.classList.add('hidden');
     }
+    myTeam = data.doi || '';
+    document.getElementById('view-agenda-btn').classList.toggle('hidden', !(agendaData && agendaData.enabled));
+    if (agendaData && agendaData.enabled) renderAgenda();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -383,6 +444,7 @@
         teamFeatureEnabled = true;
         allTeamsData = res.data;
         document.getElementById('tab-nav').classList.remove('hidden');
+        document.getElementById('tab-btn-team').classList.remove('hidden');
         renderTeamOptions(allTeamsData.teams);
       }
       return res;
@@ -391,11 +453,17 @@
   }
 
   function switchTab(name) {
-    var isPersonal = name === 'personal';
-    document.getElementById('panel-personal').classList.toggle('hidden', !isPersonal);
-    document.getElementById('panel-team').classList.toggle('hidden', isPersonal);
-    document.getElementById('tab-btn-personal').classList.toggle('active', isPersonal);
-    document.getElementById('tab-btn-team').classList.toggle('active', !isPersonal);
+    ['personal', 'team', 'agenda'].forEach(function (t) {
+      document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
+      document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
+    });
+    // Tab Agenda: vẽ lại ngay (cập nhật mốc "Đang diễn ra") + tự làm mới mỗi
+    // phút khi đang mở tab; rời tab thì dừng timer cho nhẹ máy.
+    if (agendaTimer) { clearInterval(agendaTimer); agendaTimer = null; }
+    if (name === 'agenda') {
+      renderAgenda();
+      agendaTimer = setInterval(renderAgenda, 60000);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -480,6 +548,153 @@
       : /^chinh\s*uy\b/.test(n) ? 'role-uy'
       : 'role-other';
     return '<span class="role-badge ' + cls + '">' + escapeHtml(vaiTro) + '</span>';
+  }
+
+  /* ---------- TAB: AGENDA ---------- */
+
+  function prefetchAgenda() {
+    return callApi('getAgenda', { eventId: EVENT_ID }).then(function (res) {
+      if (!res.success || !res.data || !res.data.enabled) return; // không có tab Agenda -> giữ ẩn
+      agendaData = res.data;
+      document.getElementById('tab-nav').classList.remove('hidden');
+      document.getElementById('tab-btn-agenda').classList.remove('hidden');
+      if (!document.getElementById('step-result').classList.contains('hidden')) {
+        document.getElementById('view-agenda-btn').classList.remove('hidden');
+      }
+      agendaSelectedDay = pickDefaultAgendaDay(agendaData.days);
+      renderAgenda();
+    }).catch(function () {});
+  }
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+
+  // Mặc định mở đúng ngày hôm nay nếu có trong Agenda; đã qua hết thì mở ngày
+  // cuối; chưa tới thì mở ngày đầu tiên.
+  function pickDefaultAgendaDay(days) {
+    var t = todayIso(), lastPast = -1;
+    for (var i = 0; i < days.length; i++) {
+      if (days[i].iso === t) return i;
+      if (days[i].iso && days[i].iso < t) lastPast = i;
+    }
+    var allPast = days.length && days.every(function (d) { return d.iso && d.iso < t; });
+    return allPast ? lastPast : 0;
+  }
+
+  function selectAgendaDay(i) { agendaSelectedDay = i; renderAgenda(); }
+
+  // "08:00", "8h30", "8:30 SA"... -> số phút trong ngày; không đọc được -> null
+  function parseMinutes(s) {
+    var m = String(s || '').match(/(\d{1,2})\s*[:hH.g]\s*(\d{2})?/);
+    if (!m) return null;
+    var h = +m[1], mi = m[2] ? +m[2] : 0;
+    if (h > 23 || mi > 59) return null;
+    return h * 60 + mi;
+  }
+
+  // Ô "Đội" có thể ghi nhiều đội ngăn bởi dấu phẩy; so khớp không phân biệt
+  // hoa/thường/dấu, và coi "1" với "Đội 1" là cùng một đội.
+  function teamKey(s) {
+    var n = normalizeNoDiacritics(s).replace(/\s+/g, ' ');
+    var num = n.match(/^(?:doi\s*)?(\d+)$/);
+    return num ? 'doi' + (+num[1]) : n;
+  }
+  function itemTeams(it) {
+    return String(it.doi || '').split(/[,;|\/]/).map(function (x) { return x.trim(); }).filter(Boolean);
+  }
+  function isForMyTeam(it) {
+    if (!myTeam) return false;
+    var k = teamKey(myTeam);
+    return itemTeams(it).some(function (t) { return teamKey(t) === k; });
+  }
+
+  function renderAgenda() {
+    if (!agendaData || !agendaData.enabled) return;
+    var days = agendaData.days;
+    if (agendaSelectedDay < 0 || agendaSelectedDay >= days.length) agendaSelectedDay = 0;
+
+    // Chọn ngày (chỉ hiện khi Agenda có từ 2 ngày trở lên)
+    var dayRow = document.getElementById('agenda-day-row');
+    if (days.length > 1) {
+      var t = todayIso();
+      dayRow.innerHTML = days.map(function (d, i) {
+        var parts = d.label.split(', ');
+        var main = parts.length > 1 ? parts.slice(1).join(', ') : d.label;
+        var sub = d.iso === t ? 'Hôm nay' : (parts.length > 1 ? parts[0] : 'Ngày ' + (i + 1));
+        return '<button class="agenda-day-chip' + (i === agendaSelectedDay ? ' selected' : '') + '" onclick="selectAgendaDay(' + i + ')">' +
+          escapeHtml(main.replace(/\/\d{4}$/, '')) + '<small>' + escapeHtml(sub) + '</small></button>';
+      }).join('');
+      dayRow.classList.remove('hidden');
+    } else {
+      dayRow.classList.add('hidden');
+    }
+
+    // Bộ lọc theo đội — chỉ hiện khi đã tra cứu cá nhân VÀ Agenda có dòng gắn đội
+    var hasTeamItems = days.some(function (d) { return d.items.some(function (it) { return it.doi; }); });
+    var filterEl = document.getElementById('agenda-filter');
+    var showFilter = !!myTeam && hasTeamItems;
+    filterEl.classList.toggle('hidden', !showFilter);
+    if (showFilter) document.getElementById('agenda-my-team').textContent = myTeam;
+    var onlyMine = showFilter && document.getElementById('agenda-only-mine').checked;
+
+    var day = days[agendaSelectedDay];
+    var items = day.items.filter(function (it) { return !onlyMine || !it.doi || isForMyTeam(it); });
+
+    // Đánh dấu đã qua / đang diễn ra / sắp tới — chỉ áp dụng cho ngày hôm nay.
+    // Hoạt động không có giờ kết thúc được coi là kéo dài tới mốc kế tiếp.
+    var isToday = day.iso && day.iso === todayIso();
+    var nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    var states = items.map(function () { return ''; });
+    if (isToday) {
+      var nextIdx = -1;
+      items.forEach(function (it, i) {
+        var s = parseMinutes(it.batDau);
+        if (s === null) return;
+        var e = parseMinutes(it.ketThuc);
+        if (e === null) {
+          for (var j = i + 1; j < items.length && e === null; j++) e = parseMinutes(items[j].batDau);
+          if (e === null || e <= s) e = s + 60;
+        }
+        if (nowMin >= e) states[i] = 'past';
+        else if (nowMin >= s) states[i] = 'now';
+        else if (nextIdx < 0) { nextIdx = i; states[i] = 'next'; }
+      });
+    } else if (day.iso && day.iso < todayIso()) {
+      states = items.map(function () { return 'past'; });
+    }
+
+    var html = '<div class="agenda-day-title">' + escapeHtml(day.label) + '</div>';
+    if (!items.length) {
+      html += '<div class="lookup-empty-state">Không có hoạt động nào' + (onlyMine ? ' dành cho đội của bạn' : '') + ' trong ngày này.</div>';
+    } else {
+      html += '<div class="agenda-list">' + items.map(function (it, i) {
+        var tags = '';
+        if (states[i] === 'now') tags += '<span class="agenda-tag now">● Đang diễn ra</span>';
+        if (states[i] === 'next') tags += '<span class="agenda-tag">Sắp diễn ra</span>';
+        itemTeams(it).forEach(function (t) {
+          var mine = myTeam && teamKey(t) === teamKey(myTeam);
+          tags += '<span class="agenda-tag' + (mine ? ' mine' : '') + '">' + escapeHtml(t) + '</span>';
+        });
+        var meta = [];
+        if (it.diaDiem) meta.push('📍 ' + escapeHtml(it.diaDiem));
+        if (it.ghiChu) meta.push(escapeHtml(it.ghiChu));
+        return '<div class="agenda-item' + (states[i] ? ' is-' + states[i] : '') + '">' +
+          '<div class="agenda-time">' +
+            '<div class="agenda-time-start">' + escapeHtml(it.batDau || '—') + '</div>' +
+            (it.ketThuc ? '<div class="agenda-time-end">' + escapeHtml(it.ketThuc) + '</div>' : '') +
+          '</div>' +
+          '<div class="agenda-rail"><div class="agenda-dot"></div></div>' +
+          '<div class="agenda-body">' +
+            '<div class="agenda-title">' + escapeHtml(it.noiDung) + '</div>' +
+            (meta.length ? '<div class="agenda-meta">' + meta.join('<br>') + '</div>' : '') +
+            (tags ? '<div class="agenda-tags">' + tags + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+    document.getElementById('agenda-content').innerHTML = html;
   }
 </script>
 </body>
