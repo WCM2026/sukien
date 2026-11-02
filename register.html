@@ -505,6 +505,7 @@
   var uploadRules = null;       // { required, maxFiles, maxMb, exts, title, guide } — server trả về
   var myFiles = [];             // tệp đã nộp (server là nguồn sự thật)
   var uploadBusy = 0;
+  var uploadLoading = false;    // đang chờ quy tắc upload từ server
   var selectedHat = null;
   var SIZE_ILLUSTRATION_URL = '';
   var HAT_ILLUSTRATION_URL  = '';
@@ -698,6 +699,7 @@
       alert('Vui lòng tải lên ít nhất 1 tệp ở mục "' + uploadRules.title + '"'); return;
     }
     if (uploadBusy) { alert('Đang tải tệp lên, vui lòng đợi xong rồi xác nhận.'); return; }
+    if (selectedAttend && uploadLoading) { alert('Đang tải mục tài liệu, vui lòng đợi giây lát.'); return; }
     var btn = document.getElementById('submit-btn');
     btn.innerHTML = '<span class="spinner"></span> Đang lưu...'; btn.disabled = true;
     var sizeQuanValue = (selectedAttend && currentEmployee.coSizeQuan)
@@ -794,7 +796,7 @@
     document.getElementById('reason-input').value = '';
     document.getElementById('result-recap').innerHTML = '';
     hideAll(['step-info','step-submit','step-result','step-upload']);
-    uploadRules = null; myFiles = [];
+    uploadRules = null; myFiles = []; uploadLoading = false;
     document.getElementById('upload-list').innerHTML = '';
     show('step-msnv');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -808,33 +810,66 @@
     });
   }
 
+  // Ưu tiên dữ liệu upload gửi kèm trong findEmployee (không tốn thêm request).
+  // Chỉ gọi getMyUploads khi server cũ chưa gửi kèm (data.upload === undefined).
   function loadMyUploads() {
     uploadRules = null; myFiles = [];
     hide('step-upload');
-    if (!UPLOAD_ENABLED || !currentEmployee) return;
+    if (!UPLOAD_ENABLED || !currentEmployee) { uploadLoading = false; return; }
+    if (currentEmployee.upload !== undefined) {
+      uploadLoading = false;
+      if (currentEmployee.upload) applyUploadInfo(currentEmployee.upload.rules, currentEmployee.upload.files);
+      return;
+    }
+    uploadLoading = true;
+    renderUploadLoading();
     var msnvAtCall = currentEmployee.msnv;
     callApi('getMyUploads', { eventId: EVENT_ID, msnv: msnvAtCall }).then(function (res) {
       if (!currentEmployee || currentEmployee.msnv !== msnvAtCall) return;
-      if (!res.success || !res.enabled) return;
-      uploadRules = res.rules;
-      myFiles = res.files || [];
-      document.getElementById('upload-title').textContent = '📎 ' + uploadRules.title;
-      document.getElementById('upload-req').classList.toggle('hidden', !uploadRules.required);
-      document.getElementById('upload-guide').innerHTML = uploadRules.guide || '';
-      document.getElementById('upload-rules').textContent =
-        'Nhận: ' + uploadRules.exts.map(function (e) { return e.toUpperCase(); }).join(', ') +
-        ' · tối đa ' + uploadRules.maxMb + 'MB/tệp · tối đa ' + uploadRules.maxFiles + ' tệp';
-      document.getElementById('upload-input').accept = uploadRules.exts.map(function (e) { return '.' + e; }).join(',');
-      renderUploads();
+      uploadLoading = false;
+      if (res.success && res.enabled) applyUploadInfo(res.rules, res.files);
+      updateUploadVisibility();
+    }).catch(function () {
+      uploadLoading = false;
       updateUploadVisibility();
     });
   }
 
+  function renderUploadLoading() {
+    document.getElementById('upload-title').textContent = '📎 Tài liệu đính kèm';
+    document.getElementById('upload-req').classList.add('hidden');
+    document.getElementById('upload-guide').innerHTML = '';
+    document.getElementById('upload-rules').textContent = '';
+    document.getElementById('upload-count').textContent = '';
+    document.getElementById('upload-list').innerHTML =
+      '<div class="upload-item"><div class="upload-item-body"><div class="upload-item-meta"><span class="spinner-dark"></span> Đang tải mục tài liệu...</div></div></div>';
+    document.getElementById('upload-drop').classList.add('disabled');
+    document.getElementById('upload-input').disabled = true;
+  }
+
+  function applyUploadInfo(rules, files) {
+    uploadRules = rules;
+    myFiles = files || [];
+    document.getElementById('upload-title').textContent = '📎 ' + uploadRules.title;
+    document.getElementById('upload-req').classList.toggle('hidden', !uploadRules.required);
+    document.getElementById('upload-guide').innerHTML = uploadRules.guide || '';
+    document.getElementById('upload-rules').textContent =
+      'Nhận: ' + uploadRules.exts.map(function (e) { return e.toUpperCase(); }).join(', ') +
+      ' · tối đa ' + uploadRules.maxMb + 'MB/tệp · tối đa ' + uploadRules.maxFiles + ' tệp';
+    document.getElementById('upload-input').accept = uploadRules.exts.map(function (e) { return '.' + e; }).join(',');
+    renderUploads();
+    updateUploadVisibility();
+    if (currentEmployee && !currentEmployee.daXacNhan && selectedAttend !== null) showSubmitPreview();
+  }
+
   // Hiện mục upload khi: đang chọn "Có tham dự", hoặc đã đăng ký "Có tham dự" từ trước (quay lại bổ sung tệp).
   function updateUploadVisibility() {
-    if (!uploadRules || !currentEmployee) { hide('step-upload'); return; }
+    var btn = document.getElementById('submit-btn');
+    if (!currentEmployee || (!uploadRules && !uploadLoading)) { hide('step-upload'); if (btn && !uploadBusy) btn.disabled = false; return; }
     var attending = currentEmployee.daXacNhan ? currentEmployee.dangKy === 'Có tham dự' : selectedAttend === true;
     if (attending) show('step-upload'); else hide('step-upload');
+    // Chưa tải xong quy tắc upload mà đang chọn "Có tham dự" -> khoá nút Xác nhận tạm thời.
+    if (btn) btn.disabled = !!(uploadLoading && attending);
   }
 
   function fileIcon(name) {
@@ -852,6 +887,8 @@
 
   function renderUploads(pending) {
     pending = pending || [];
+    // Giữ bản gửi kèm trong currentEmployee đồng bộ (dùng lại khi trang vẽ lại thông tin nhân viên).
+    if (currentEmployee && currentEmployee.upload) currentEmployee.upload.files = myFiles;
     var html = myFiles.map(function (f) {
       return '<div class="upload-item"><div class="upload-item-icon">' + fileIcon(f.name) + '</div>' +
         '<div class="upload-item-body"><div class="upload-item-name">' + escHtml(f.name) + '</div>' +
@@ -959,7 +996,7 @@
     myFiles = myFiles.filter(function (x) { return x.id !== fileId; });
     callApi('deleteRegFile', { eventId: EVENT_ID, msnv: currentEmployee.msnv, fileId: fileId }).then(function (res) {
       if (res.success) myFiles = res.files || [];
-      else { alert('❌ ' + res.error); loadMyUploads(); return; }
+      else { alert('❌ ' + res.error); currentEmployee.upload = undefined; loadMyUploads(); return; }
       renderUploads();
     });
   }
