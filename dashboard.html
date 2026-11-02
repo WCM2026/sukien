@@ -589,6 +589,25 @@
     </div>
 
     <div class="card">
+      <div class="card-title">📎 Upload tài liệu khi đăng ký</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Khi BẬT: trang Đăng ký hiện thêm mục tải ảnh/tệp cho người chọn "Có tham dự" (người đã đăng ký từ trước nhập lại MSNV là bổ sung được). Mỗi người 1 thư mục riêng "MSNV - Họ tên" trên Drive; mọi lượt tải lên/xoá ghi vào tab <code>TaiLieu</code> của Sheet sự kiện.</p>
+      <label class="toggle-row"><input type="checkbox" id="cfg-ChoUploadTaiLieu"><span>Bật upload tài liệu cho sự kiện này</span></label>
+      <label class="toggle-row" style="margin-top:10px"><input type="checkbox" id="cfg-UploadBatBuoc"><span>Bắt buộc nộp ít nhất 1 tệp mới xác nhận "Có tham dự" được</span></label>
+      <div class="field-row" style="margin-top:14px">
+        <div class="field"><label>Tiêu đề mục upload</label><input id="cfg-UploadTieuDe" placeholder="VD: Ảnh chân dung / Giấy khám sức khoẻ"></div>
+        <div class="field"><label>Thư mục gốc trên Drive (tuỳ chọn)</label><input id="cfg-ThuMucUploadId" placeholder="Để trống = tự tạo TaiLieu_<mã sự kiện>"></div>
+      </div>
+      <div class="field"><label>Hướng dẫn hiện trên trang Đăng ký (tuỳ chọn)</label><textarea id="cfg-UploadHuongDan" rows="3" style="width:100%;font-family:inherit;font-size:14px;padding:11px 14px;border:2px solid var(--border);border-radius:10px;resize:vertical;color:var(--text);outline:none" placeholder="VD: Tải lên 1 ảnh chân dung rõ mặt, nền sáng để làm thẻ đeo."></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Số tệp tối đa / người</label><input id="cfg-UploadToiDa" type="number" min="1" max="50" placeholder="Mặc định 5"></div>
+        <div class="field"><label>Dung lượng tối đa / tệp (MB)</label><input id="cfg-UploadMaxMB" type="number" min="1" max="25" placeholder="Mặc định 10, tối đa 25"></div>
+      </div>
+      <div class="field"><label>Định dạng cho phép (đuôi tệp, cách nhau dấu phẩy)</label><input id="cfg-UploadLoaiFile" placeholder="Mặc định: jpg,jpeg,png,heic,heif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx"></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Chỉ nhận ảnh? Điền <code>jpg,jpeg,png,heic</code>. Ảnh chụp điện thoại lớn hơn 3MB được tự thu nhỏ (cạnh dài 2560px) trước khi tải lên. Nhớ bấm <b>Lưu cấu hình</b> ở cuối trang.</p>
+      <div id="upload-stats" style="margin-top:10px;font-size:13px"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">📧 Mail cảm ơn tự động sau khảo sát</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Khi bật, hệ thống tự gửi 1 email cảm ơn (từ hộp mail TTNB qua Microsoft Graph) NGAY khi ai đó nộp khảo sát xong — kèm link ảnh/video ở trên nếu có. Chỉ gửi được cho người có mã nhân viên trong danh sách VÀ sự kiện đã khai báo cột Email (tab "Cấu trúc dữ liệu") — khách tự điền (không có MSNV) sẽ không nhận được mail này.</p>
       <label class="toggle-row">
@@ -1773,6 +1792,7 @@
     // adminGetConfig (thay cho getConfigForClient): bản công khai ẩn LinkAnhVideo/ThuMucAnhId khi bật Ảnh bảo mật.
     callApi('adminGetConfig', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE }).then(admOnConfigLoaded);
     admLoadPhotoStats();
+    admLoadUploadStats();
   }
 
   /* ---------- CẤU TRÚC DỮ LIỆU (column map) ---------- */
@@ -2727,7 +2747,7 @@
   /* ---------- CẤU HÌNH ---------- */
 
   var admRTE_KEYS = ['MoTaDangKy', 'MoTaKhaoSat', 'ThankYouText', 'MailCamOnNoiDung'];
-  var admCFG_CHECKBOX_KEYS = ['ChoTuDien', 'MailCamOnTuDong', 'AnhBaoMat'];
+  var admCFG_CHECKBOX_KEYS = ['ChoTuDien', 'MailCamOnTuDong', 'AnhBaoMat', 'ChoUploadTaiLieu', 'UploadBatBuoc'];
 
   // admCurrentConfigCache: giữ lại bản Config vừa tải để tab Gửi mail dùng
   // (nút "Dùng mẫu thư cảm ơn khảo sát" cần đọc MailCamOnTieuDe/NoiDung mà
@@ -2808,6 +2828,19 @@
   }
 
   /* ---------- ẢNH BẢO MẬT ---------- */
+
+  function admLoadUploadStats() {
+    var box = document.getElementById('upload-stats');
+    if (!box) return;
+    box.innerHTML = '';
+    callApi('adminUploadStats', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE }).then(function (res) {
+      if (!res.success) return;
+      var d = res.data;
+      if (!d.enabled && !d.files) return;
+      box.innerHTML = '👥 Đã nộp: <b>' + d.people + '</b> người · 📄 <b>' + d.files + '</b> tệp · ' + d.totalMb + ' MB' +
+        (d.folderUrl ? ' &nbsp;·&nbsp; <a href="' + admEscapeHtml(d.folderUrl) + '" target="_blank" rel="noopener">📂 Mở thư mục ' + admEscapeHtml(d.folderName) + '</a>' : '');
+    });
+  }
 
   function admLoadPhotoStats() {
     var box = document.getElementById('photo-stats');
@@ -2906,7 +2939,7 @@
   }
 
   function admSaveConfig() {
-    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu','MailCamOnTieuDe','GuidebookTieuDe','GuidebookAnh','GuidebookPdf','ThuMucAnhId','GioiHanThietBi'];
+    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu','MailCamOnTieuDe','GuidebookTieuDe','GuidebookAnh','GuidebookPdf','ThuMucAnhId','GioiHanThietBi','UploadTieuDe','UploadHuongDan','UploadToiDa','UploadMaxMB','UploadLoaiFile','ThuMucUploadId'];
     var payload = {};
     keys.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).value; });
     admRTE_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).innerHTML; });
