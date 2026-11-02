@@ -207,6 +207,28 @@
     .info-item.full{grid-column:1}
     .header-logo{max-width:260px;max-height:88px}
   }
+
+  /* ---- Upload tài liệu ---- */
+  .upload-guide { font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:12px; }
+  .upload-guide * { font-family:inherit !important; }
+  .upload-drop { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:20px 14px; border:2px dashed var(--border); border-radius:12px; background:var(--bg); cursor:pointer; text-align:center; transition:border-color .15s, background .15s; }
+  .upload-drop:hover, .upload-drop.drag { border-color:var(--primary); background:#fff; }
+  .upload-drop.disabled { opacity:.55; cursor:not-allowed; }
+  .upload-drop-icon { font-size:26px; }
+  .upload-drop-title { font-size:14px; font-weight:700; color:var(--text); }
+  .upload-drop-sub { font-size:12px; color:var(--muted); }
+  .upload-list { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+  .upload-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+  .upload-item-icon { font-size:20px; flex-shrink:0; }
+  .upload-item-body { flex:1; min-width:0; }
+  .upload-item-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .upload-item-meta { font-size:12px; color:var(--muted); }
+  .upload-item-meta.err { color:var(--danger); }
+  .upload-item-del { border:none; background:none; font-size:16px; cursor:pointer; padding:6px; border-radius:8px; color:var(--muted); flex-shrink:0; }
+  .upload-item-del:hover { background:#fef2f2; color:var(--danger); }
+  .upload-count { font-size:12px; color:var(--muted); margin-top:10px; text-align:right; }
+  .upload-req { color:var(--danger); font-weight:700; }
+  .spinner-dark { display:inline-block; width:14px; height:14px; border:2px solid rgba(0,0,0,.12); border-top-color:var(--primary); border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
 </style>
 </head>
 <body>
@@ -322,6 +344,20 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- TÀI LIỆU ĐÍNH KÈM (Config ChoUploadTaiLieu) — tệp được tải lên NGAY khi chọn -->
+<div class="card hidden" id="step-upload">
+  <div class="card-title"><span id="upload-title">📎 Tài liệu đính kèm</span> <span class="upload-req hidden" id="upload-req">*</span></div>
+  <div class="upload-guide" id="upload-guide"></div>
+  <label class="upload-drop" id="upload-drop">
+    <input type="file" id="upload-input" multiple hidden onchange="onPickFiles(this.files); this.value='';">
+    <div class="upload-drop-icon">⬆️</div>
+    <div class="upload-drop-title">Chọn ảnh / tệp để tải lên</div>
+    <div class="upload-drop-sub" id="upload-rules"></div>
+  </label>
+  <div class="upload-list" id="upload-list"></div>
+  <div class="upload-count" id="upload-count"></div>
 </div>
 
 <!-- BƯỚC 3: XÁC NHẬN GỬI -->
@@ -448,6 +484,7 @@
     // Ảnh minh hoạ size áo / mũ — chỉ hiện nếu Admin đã điền URL
     SIZE_ILLUSTRATION_URL = cfg.AnhMinhHoaAo || '';
     HAT_ILLUSTRATION_URL  = cfg.AnhMinhHoaMu || '';
+    UPLOAD_ENABLED = !!cfg.ChoUploadTaiLieu;
   }
 
   function lookupEmployee() {
@@ -463,6 +500,11 @@
 
   var SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
   var selectedSize = null;
+  // ---- Upload tài liệu ----
+  var UPLOAD_ENABLED = false;   // Config ChoUploadTaiLieu
+  var uploadRules = null;       // { required, maxFiles, maxMb, exts, title, guide } — server trả về
+  var myFiles = [];             // tệp đã nộp (server là nguồn sự thật)
+  var uploadBusy = 0;
   var selectedHat = null;
   var SIZE_ILLUSTRATION_URL = '';
   var HAT_ILLUSTRATION_URL  = '';
@@ -533,6 +575,8 @@
       else { hImg.classList.add('hidden'); }
     }
 
+    loadMyUploads();
+
     if (currentEmployee.daXacNhan) {
       show('locked-section'); hide('attend-section');
       var dk = currentEmployee.dangKy || '—', isTham = dk === 'Có tham dự';
@@ -598,6 +642,7 @@
     } else {
       show('reason-section'); hide('size-section'); hide('size-quan-section'); hide('hat-section');
     }
+    updateUploadVisibility();
     showSubmitPreview(); show('step-submit');
   }
 
@@ -614,6 +659,9 @@
     }
     if (selectedAttend && currentEmployee.coMu && selectedHat) {
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+selectedHat+'</strong></div>';
+    }
+    if (selectedAttend && uploadRules) {
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">' + escHtml(uploadRules.title) + '</span><strong style="color:' + (uploadRules.required && !myFiles.length ? '#f05252' : 'inherit') + '">' + (myFiles.length ? myFiles.length + ' tệp' : (uploadRules.required ? 'Chưa nộp (bắt buộc)' : 'Chưa nộp')) + '</strong></div>';
     }
     if (!selectedAttend) {
       var ly = document.getElementById('reason-input').value.trim();
@@ -645,6 +693,11 @@
     if (selectedAttend && currentEmployee.coMu && !selectedHat) {
       alert('Vui lòng chọn tình trạng mũ'); return;
     }
+    if (selectedAttend && uploadRules && uploadRules.required && myFiles.length < 1) {
+      document.getElementById('step-upload').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      alert('Vui lòng tải lên ít nhất 1 tệp ở mục "' + uploadRules.title + '"'); return;
+    }
+    if (uploadBusy) { alert('Đang tải tệp lên, vui lòng đợi xong rồi xác nhận.'); return; }
     var btn = document.getElementById('submit-btn');
     btn.innerHTML = '<span class="spinner"></span> Đang lưu...'; btn.disabled = true;
     var sizeQuanValue = (selectedAttend && currentEmployee.coSizeQuan)
@@ -671,7 +724,9 @@
     if (isTham && emp.coSizeAo && emp.sizeAo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+emp.sizeAo+'</strong></div>';
     if (isTham && emp.coSizeQuan && emp.sizeQuan) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size quần</span><strong>'+emp.sizeQuan+'</strong></div>';
     if (isTham && emp.coMu && emp.mu) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+emp.mu+'</strong></div>';
+    if (isTham && uploadRules) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">' + escHtml(uploadRules.title) + '</span><strong>' + myFiles.length + ' tệp</strong></div>';
     html += '</div>';
+    if (isTham && uploadRules) html += '<div style="font-size:12px;color:#64748b;margin-top:8px">Cần bổ sung tài liệu? Bấm "Đăng ký nhân viên khác", nhập lại mã nhân viên của bạn để tải thêm.</div>';
     return html;
   }
 
@@ -684,6 +739,10 @@
       if (result.existing) { currentEmployee.dangKy = result.existing.dangKy; currentEmployee.lyDo = result.existing.lyDo; }
       onFoundEmployee({ success:true, data: currentEmployee }); return;
     }
+    if (!result.success && result.needUpload) {
+      document.getElementById('step-upload').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      alert(result.error); return;
+    }
     if (!result.success) { document.getElementById('result-content').innerHTML = '<div class="status-box status-error">❌ '+result.error+'</div>'; show('step-result'); return; }
     currentEmployee.daXacNhan = true;
     currentEmployee.dangKy = selectedAttend ? 'Có tham dự' : 'Không tham dự';
@@ -695,7 +754,7 @@
     currentEmployee.lyDo   = !selectedAttend ? document.getElementById('reason-input').value.trim() : currentEmployee.lyDo;
     // Theo yêu cầu: sau khi đăng ký xong, ẩn toàn bộ form/thông tin khai báo phía trên,
     // chỉ còn lại 1 khối kết quả duy nhất (thông báo thành công + recap tình trạng).
-    hideAll(['step-msnv','step-info','step-submit']);
+    hideAll(['step-msnv','step-info','step-submit','step-upload']);
     document.getElementById('result-content').innerHTML =
       '<div class="status-box status-success">✅ Đăng ký thành công! '+
       (selectedAttend ? 'Hẹn gặp bạn tại sự kiện.' : 'Cảm ơn bạn đã phản hồi.') + '</div>';
@@ -734,10 +793,188 @@
     document.getElementById('lookup-status').innerHTML = '';
     document.getElementById('reason-input').value = '';
     document.getElementById('result-recap').innerHTML = '';
-    hideAll(['step-info','step-submit','step-result']);
+    hideAll(['step-info','step-submit','step-result','step-upload']);
+    uploadRules = null; myFiles = [];
+    document.getElementById('upload-list').innerHTML = '';
     show('step-msnv');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  /* ---------- UPLOAD TÀI LIỆU ---------- */
+
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function loadMyUploads() {
+    uploadRules = null; myFiles = [];
+    hide('step-upload');
+    if (!UPLOAD_ENABLED || !currentEmployee) return;
+    var msnvAtCall = currentEmployee.msnv;
+    callApi('getMyUploads', { eventId: EVENT_ID, msnv: msnvAtCall }).then(function (res) {
+      if (!currentEmployee || currentEmployee.msnv !== msnvAtCall) return;
+      if (!res.success || !res.enabled) return;
+      uploadRules = res.rules;
+      myFiles = res.files || [];
+      document.getElementById('upload-title').textContent = '📎 ' + uploadRules.title;
+      document.getElementById('upload-req').classList.toggle('hidden', !uploadRules.required);
+      document.getElementById('upload-guide').innerHTML = uploadRules.guide || '';
+      document.getElementById('upload-rules').textContent =
+        'Nhận: ' + uploadRules.exts.map(function (e) { return e.toUpperCase(); }).join(', ') +
+        ' · tối đa ' + uploadRules.maxMb + 'MB/tệp · tối đa ' + uploadRules.maxFiles + ' tệp';
+      document.getElementById('upload-input').accept = uploadRules.exts.map(function (e) { return '.' + e; }).join(',');
+      renderUploads();
+      updateUploadVisibility();
+    });
+  }
+
+  // Hiện mục upload khi: đang chọn "Có tham dự", hoặc đã đăng ký "Có tham dự" từ trước (quay lại bổ sung tệp).
+  function updateUploadVisibility() {
+    if (!uploadRules || !currentEmployee) { hide('step-upload'); return; }
+    var attending = currentEmployee.daXacNhan ? currentEmployee.dangKy === 'Có tham dự' : selectedAttend === true;
+    if (attending) show('step-upload'); else hide('step-upload');
+  }
+
+  function fileIcon(name) {
+    var ext = (String(name).match(/\.([a-z0-9]+)$/i) || [])[1] || '';
+    ext = ext.toLowerCase();
+    if (/^(jpe?g|png|heic|heif|webp|gif)$/.test(ext)) return '🖼️';
+    if (ext === 'pdf') return '📕';
+    if (/^(docx?)$/.test(ext)) return '📝';
+    if (/^(xlsx?|csv)$/.test(ext)) return '📊';
+    if (/^(pptx?)$/.test(ext)) return '📽️';
+    return '📄';
+  }
+
+  function fmtSize(kb) { return kb >= 1024 ? (Math.round(kb / 102.4) / 10) + ' MB' : kb + ' KB'; }
+
+  function renderUploads(pending) {
+    pending = pending || [];
+    var html = myFiles.map(function (f) {
+      return '<div class="upload-item"><div class="upload-item-icon">' + fileIcon(f.name) + '</div>' +
+        '<div class="upload-item-body"><div class="upload-item-name">' + escHtml(f.name) + '</div>' +
+        '<div class="upload-item-meta">✓ Đã tải lên · ' + fmtSize(f.kb) + '</div></div>' +
+        '<button type="button" class="upload-item-del" title="Xoá tệp" onclick="deleteUpload(\'' + escHtml(f.id) + '\')">🗑</button></div>';
+    }).join('') + pending.map(function (p) {
+      return '<div class="upload-item"><div class="upload-item-icon">' + fileIcon(p.name) + '</div>' +
+        '<div class="upload-item-body"><div class="upload-item-name">' + escHtml(p.name) + '</div>' +
+        '<div class="upload-item-meta' + (p.error ? ' err' : '') + '">' +
+        (p.error ? '❌ ' + escHtml(p.error) : '<span class="spinner-dark"></span> ' + escHtml(p.status || 'Đang tải lên...')) +
+        '</div></div></div>';
+    }).join('');
+    document.getElementById('upload-list').innerHTML = html;
+    var full = uploadRules && myFiles.length >= uploadRules.maxFiles;
+    document.getElementById('upload-drop').classList.toggle('disabled', !!full);
+    document.getElementById('upload-input').disabled = !!full;
+    document.getElementById('upload-count').textContent = uploadRules
+      ? 'Đã nộp ' + myFiles.length + ' / ' + uploadRules.maxFiles + ' tệp' + (full ? ' (đã đủ — xoá bớt nếu muốn thay)' : '')
+      : '';
+  }
+
+  // Ảnh chụp điện thoại thường 4–12MB: thu nhỏ còn cạnh dài 2560px (JPEG) trước
+  // khi gửi để tải nhanh và không vượt giới hạn. Ảnh HEIC/tệp khác gửi nguyên.
+  function maybeCompressImage(file) {
+    var limit = uploadRules.maxMb * 1024 * 1024;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size <= Math.min(limit, 3 * 1024 * 1024)) return Promise.resolve(file);
+    if (uploadRules.exts.indexOf('jpg') < 0 && uploadRules.exts.indexOf('jpeg') < 0) return Promise.resolve(file);
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var max = 2560, w = img.naturalWidth, h = img.naturalHeight;
+        var scale = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (blob) {
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          var name = file.name.replace(/\.[a-z0-9]+$/i, '') + '.jpg';
+          resolve(new File([blob], name, { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
+  function readBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(',')[1] || ''); };
+      r.onerror = function () { reject(new Error('Không đọc được tệp')); };
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function onPickFiles(fileList) {
+    if (!uploadRules || !currentEmployee) return;
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    var pending = files.map(function (f) { return { file: f, name: f.name, status: 'Đang chờ...' }; });
+    var slots = uploadRules.maxFiles - myFiles.length;
+    pending.forEach(function (p, i) {
+      var ext = ((p.name.match(/\.([a-z0-9]+)$/i) || [])[1] || '').toLowerCase();
+      if (uploadRules.exts.indexOf(ext) < 0) p.error = 'Định dạng không được phép';
+      else if (i >= slots) p.error = 'Vượt quá số tệp tối đa (' + uploadRules.maxFiles + ')';
+    });
+    renderUploads(pending);
+    uploadBusy++;
+    try {
+      for (var i = 0; i < pending.length; i++) {
+        var p = pending[i];
+        if (p.error) continue;
+        try {
+          p.status = 'Đang chuẩn bị...'; renderUploads(pending);
+          var f = await maybeCompressImage(p.file);
+          if (f.size > uploadRules.maxMb * 1024 * 1024) { p.error = 'Tệp lớn hơn ' + uploadRules.maxMb + 'MB'; renderUploads(pending); continue; }
+          p.status = 'Đang tải lên (' + fmtSize(Math.round(f.size / 1024)) + ')...'; renderUploads(pending);
+          var b64 = await readBase64(f);
+          var res = await callApi('uploadRegFile', {
+            eventId: EVENT_ID, msnv: currentEmployee.msnv,
+            fileName: f.name, mimeType: f.type || '', base64: b64
+          });
+          if (!res.success) { p.error = res.error || 'Tải lên thất bại'; }
+          else { myFiles = res.files || myFiles; p.done = true; }
+        } catch (e) {
+          p.error = e.message || 'Lỗi tải lên';
+        }
+        renderUploads(pending.filter(function (x) { return !x.done; }));
+      }
+    } finally {
+      uploadBusy--;
+    }
+    // Giữ lại dòng lỗi để người dùng biết tệp nào chưa lên; tệp thành công đã nằm trong danh sách.
+    var failed = pending.filter(function (x) { return x.error; });
+    renderUploads(failed);
+    if (currentEmployee && !currentEmployee.daXacNhan && selectedAttend !== null) showSubmitPreview();
+  }
+
+  function deleteUpload(fileId) {
+    var f = myFiles.filter(function (x) { return x.id === fileId; })[0];
+    if (!f || !confirm('Xoá tệp "' + f.name + '"?')) return;
+    renderUploads([{ name: f.name, status: 'Đang xoá...' }]);
+    myFiles = myFiles.filter(function (x) { return x.id !== fileId; });
+    callApi('deleteRegFile', { eventId: EVENT_ID, msnv: currentEmployee.msnv, fileId: fileId }).then(function (res) {
+      if (res.success) myFiles = res.files || [];
+      else { alert('❌ ' + res.error); loadMyUploads(); return; }
+      renderUploads();
+    });
+  }
+
+  // Kéo-thả tệp vào ô upload (máy tính).
+  (function () {
+    var drop = document.getElementById('upload-drop');
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('drag'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('drag'); });
+    });
+    drop.addEventListener('drop', function (e) { if (!drop.classList.contains('disabled')) onPickFiles(e.dataTransfer.files); });
+  })();
 
   function show(id){ document.getElementById(id).classList.remove('hidden'); }
   function hide(id){ document.getElementById(id).classList.add('hidden'); }
