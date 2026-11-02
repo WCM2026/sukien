@@ -217,6 +217,10 @@
       <div class="locked-icon">🔒</div>
       <div class="locked-title">Bạn đã khảo sát rồi!</div>
       <div class="locked-sub">Mỗi người chỉ khảo sát <strong>1 lần duy nhất</strong>. Nếu cần thay đổi câu trả lời, hãy gửi yêu cầu cho BTC.</div>
+      <div id="photo-resend-wrap" class="hidden" style="margin-top:14px">
+        <button class="btn btn-primary btn-full" onclick="resendPhotoLink()" id="photo-resend-btn">📷 Gửi lại link xem ảnh vào email</button>
+        <div id="photo-resend-status" style="margin-top:10px"></div>
+      </div>
       <button class="btn btn-outline btn-full" style="margin-top:14px" onclick="openChangeRequest()" id="change-request-btn">📨 Báo thay đổi cho BTC</button>
       <div id="change-request-box" class="change-request-box hidden">
         <textarea class="textarea-field" id="change-request-text" style="min-height:90px" placeholder="Mô tả thay đổi bạn cần..."></textarea>
@@ -253,6 +257,8 @@
   var mode = null;
   var identity = null;
   var answers = {};
+  var photoSecure = false;      // Config AnhBaoMat — album chỉ người đã khảo sát xem được
+  var photoLabel = 'Xem ảnh sự kiện';
 
   window.addEventListener('DOMContentLoaded', function () {
     if (!EVENT_ID) {
@@ -287,6 +293,10 @@
     document.title = (cfg.TenSuKien || '') + ' — Khảo sát';
     if (cfg.MoTaKhaoSat) document.getElementById('desc-text').innerHTML = cfg.MoTaKhaoSat;
     if (cfg.ThankYouText) document.getElementById('done-text').innerHTML = cfg.ThankYouText;
+    // Chế độ ảnh bảo mật: server đã ẩn LinkAnhVideo khỏi config công khai, nút
+    // xem ảnh riêng chỉ được thêm sau khi nộp khảo sát (xem onSubmitDone).
+    photoSecure = !!cfg.AnhBaoMat;
+    if (cfg.LinkAnhVideoLabel) photoLabel = cfg.LinkAnhVideoLabel;
     var mediaWrap = document.getElementById('media-link-wrap');
     var mediaLinks = [
       { url: cfg.LinkAnhVideo, label: cfg.LinkAnhVideoLabel || 'Xem ảnh / video sự kiện' },
@@ -365,6 +375,8 @@
       document.getElementById('lookup-status').innerHTML = '';
       document.getElementById('manual-hint').hidden = true;
       identity = { msnv: result.data.msnv, hoTen: result.data.hoTen };
+      document.getElementById('photo-resend-wrap').classList.toggle('hidden', !photoSecure);
+      document.getElementById('photo-resend-status').innerHTML = '';
       document.getElementById('already-done-section').classList.remove('hidden');
       return;
     }
@@ -538,9 +550,47 @@
       }
       return;
     }
+    if (res.photoToken) addPhotoButton(res.photoToken);
     document.getElementById('step-questions').classList.add('hidden');
     document.getElementById('step-done').classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Nút "Xem ảnh" riêng của người vừa khảo sát — link chứa token cá nhân,
+  // trang gallery.html tự giới hạn số thiết bị mở được link này.
+  function addPhotoButton(token) {
+    var wrap = document.getElementById('media-link-wrap');
+    var href = 'gallery.html?event=' + encodeURIComponent(EVENT_ID) + '&t=' + encodeURIComponent(token);
+    var a = document.createElement('a');
+    a.className = 'btn btn-primary btn-full';
+    a.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;text-decoration:none';
+    a.href = href; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = '📷 ' + photoLabel;
+    var note = document.createElement('div');
+    note.className = 'muted';
+    note.style.cssText = 'font-size:12px;margin:8px 0 10px';
+    note.textContent = 'Link xem ảnh dành riêng cho bạn (cũng đã gửi qua email nếu BTC bật mail cảm ơn). Vui lòng không chia sẻ cho người khác.';
+    var first = wrap.firstChild;
+    if (first && first.style) first.style.marginTop = '0';
+    wrap.insertBefore(note, first);
+    wrap.insertBefore(a, note);
+    wrap.classList.remove('hidden');
+  }
+
+  function resendPhotoLink() {
+    if (!identity || !identity.msnv) return;
+    var btn = document.getElementById('photo-resend-btn');
+    var st = document.getElementById('photo-resend-status');
+    btn.innerHTML = '<span class="spinner"></span> Đang gửi...'; btn.disabled = true;
+    callApi('resendPhotoLink', { eventId: EVENT_ID, msnv: identity.msnv }).then(function (res) {
+      btn.innerHTML = '📷 Gửi lại link xem ảnh vào email'; btn.disabled = false;
+      st.innerHTML = res.success
+        ? '<div class="status-box status-success">✅ Đã gửi link xem ảnh tới ' + (res.emailMasked || 'email của bạn') + '. Kiểm tra cả mục Junk/Spam.</div>'
+        : '<div class="status-box status-error">❌ ' + res.error + '</div>';
+    }).catch(function (err) {
+      btn.innerHTML = '📷 Gửi lại link xem ảnh vào email'; btn.disabled = false;
+      st.innerHTML = '<div class="status-box status-error">❌ Lỗi kết nối: ' + err.message + '</div>';
+    });
   }
 </script>
 </div>

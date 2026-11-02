@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Ảnh sự kiện</title>
+<script src="api.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+  :root {
+    --primary: #E2231A; --primary-dark: #B01810;
+    --success: #0e9f6e; --danger: #f05252; --warning: #e3a008;
+    --bg: #faf6f5; --card: #ffffff; --border: #e2e8f0;
+    --text: #1e293b; --muted: #64748b; --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); padding-bottom: 40px; }
+  .hidden { display: none !important; }
+
+  .top-band {
+    background:
+      radial-gradient(ellipse 140% 100% at 15% -20%, rgba(255,255,255,.16) 0%, transparent 55%),
+      linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+    padding: 14px 20px; text-align: center;
+    box-shadow: 0 6px 16px -10px rgba(176,24,16,.5);
+  }
+  .top-band img { height: 26px; filter: brightness(0) invert(1); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+  .hero { text-align: center; padding: 22px 0 6px; }
+  .hero-logo { max-height: 64px; max-width: 220px; object-fit: contain; margin-bottom: 10px; }
+  .hero h1 { font-size: 22px; font-weight: 800; line-height: 1.3; }
+  .hero .program { font-size: 13px; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .hero .hello { margin-top: 6px; font-size: 14px; color: var(--muted); }
+  .hero .hello b { color: var(--text); }
+  .hero-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; border: none; text-decoration: none; transition: transform .15s, background .15s; }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-outline { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+
+  .chips { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0 10px; margin-top: 10px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex-shrink: 0; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--border); background: #fff; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; white-space: nowrap; }
+  .chip .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .chip.active .n { color: rgba(255,255,255,.8); }
+
+  .album-head { margin: 18px 0 10px; display: flex; align-items: baseline; gap: 8px; }
+  .album-head h2 { font-size: 16px; font-weight: 800; }
+  .album-head span { font-size: 13px; color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  @media (min-width: 640px) { .grid { grid-template-columns: repeat(4, 1fr); gap: 6px; } }
+  @media (min-width: 960px) { .grid { grid-template-columns: repeat(6, 1fr); } }
+  .tile { position: relative; aspect-ratio: 1 / 1; background: #ece6e4; border-radius: 6px; overflow: hidden; cursor: pointer; border: none; padding: 0; }
+  .tile::before { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+  .tile.loaded::before, .tile.failed::before { display: none; }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .25s; }
+  .tile.loaded img { opacity: 1; }
+  .tile.failed::after { content: '⚠️'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+
+  .card { background: var(--card); border-radius: var(--radius); padding: 26px 22px; box-shadow: 0 4px 24px rgba(0,0,0,.06); max-width: 460px; margin: 30px auto 0; text-align: center; }
+  .card .icon { font-size: 40px; margin-bottom: 10px; }
+  .card h2 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .card .btn { margin-top: 16px; }
+
+  .note { text-align: center; font-size: 12px; color: var(--muted); margin-top: 26px; line-height: 1.6; }
+
+  .loading { text-align: center; padding: 60px 0; color: var(--muted); font-size: 14px; font-weight: 600; }
+  .spinner { width: 28px; height: 28px; border: 3px solid rgba(226,35,26,.18); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- Lightbox ---- */
+  .lb { position: fixed; inset: 0; background: rgba(10,10,12,.96); z-index: 50; display: flex; flex-direction: column; touch-action: pan-y; }
+  .lb-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; padding-top: max(12px, env(safe-area-inset-top)); color: #fff; gap: 10px; }
+  .lb-info { font-size: 13px; opacity: .85; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .lb-icon { width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lb-icon:disabled { opacity: .35; cursor: default; }
+  .lb-stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 0 8px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; }
+  .lb-stage img.blurry { filter: blur(6px); }
+  .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 50%; border: none; background: rgba(255,255,255,.14); color: #fff; font-size: 22px; cursor: pointer; display: none; }
+  @media (hover: hover) and (min-width: 700px) { .lb-nav { display: block; } }
+  .lb-prev { left: 14px; } .lb-next { right: 14px; }
+  .lb-spin { position: absolute; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+</style>
+</head>
+<body>
+<div class="top-band"><img src="https://ops.winmart.vn/assets/img/logo/logo.png" alt="WinCommerce"></div>
+
+<div class="wrap">
+  <div id="state-loading" class="loading"><div class="spinner"></div>Đang kiểm tra quyền xem ảnh...</div>
+  <div id="state-msg" class="hidden"></div>
+
+  <div id="gallery" class="hidden">
+    <div class="hero">
+      <img class="hero-logo hidden" id="hero-logo" alt="">
+      <div class="program hidden" id="hero-program"></div>
+      <h1 id="hero-title">Ảnh sự kiện</h1>
+      <div class="hello" id="hero-hello"></div>
+      <div class="hero-actions" id="hero-actions"></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div id="albums"></div>
+    <div class="note">🔒 Album dành riêng cho người đã tham gia khảo sát.<br>Link này gắn với bạn và chỉ mở được trên số thiết bị giới hạn — vui lòng không chia sẻ.</div>
+  </div>
+</div>
+
+<div class="lb hidden" id="lb">
+  <div class="lb-top">
+    <div class="lb-info" id="lb-info"></div>
+    <div class="lb-btns">
+      <button class="lb-icon" id="lb-dl" title="Tải ảnh" onclick="downloadCurrent()">⬇</button>
+      <button class="lb-icon" title="Đóng" onclick="closeLb()">✕</button>
+    </div>
+  </div>
+  <div class="lb-stage" id="lb-stage">
+    <img id="lb-img" alt="">
+    <div class="lb-spin hidden" id="lb-spin"></div>
+    <button class="lb-nav lb-prev" onclick="step(-1)">‹</button>
+    <button class="lb-nav lb-next" onclick="step(1)">›</button>
+  </div>
+</div>
+
+<script>
+  var EVENT_ID = getQueryParam('event');
+  var TOKEN = getQueryParam('t');
+  var DEVICE_ID = getDeviceId();
+  var UA = navigator.userAgent.substring(0, 120);
+
+  var DATA = null;          // { albums, items, ... } từ getGallery
+  var currentAlbum = -1;    // -1 = tất cả
+  var thumbs = {};          // ThumbId -> dataURL
+  var fulls = {};           // ViewId -> dataURL (giữ tối đa vài ảnh gần nhất)
+  var fullOrder = [];
+  var visibleList = [];     // danh sách item theo thứ tự đang hiển thị (cho lightbox)
+  var lbIndex = -1;
+
+  // Mã thiết bị ngẫu nhiên, lưu lâu dài trên trình duyệt này — server dùng để
+  // đếm số thiết bị đã mở link. Không lưu được (ẩn danh/chặn storage) -> mỗi
+  // lần mở sẽ tính là 1 thiết bị mới.
+  function getDeviceId() {
+    var key = 'sk_device_id', id = '';
+    try { id = localStorage.getItem(key) || ''; } catch (e) {}
+    if (!/^[0-9a-f]{32}$/.test(id)) {
+      var b = new Uint8Array(16);
+      (window.crypto || window.msCrypto).getRandomValues(b);
+      id = Array.prototype.map.call(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+      try { localStorage.setItem(key, id); } catch (e) {}
+    }
+    return id;
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function surveyUrl() { return 'survey.html?event=' + encodeURIComponent(EVENT_ID); }
+
+  function showMessage(icon, title, text, withSurveyBtn) {
+    document.getElementById('state-loading').classList.add('hidden');
+    document.getElementById('gallery').classList.add('hidden');
+    var box = document.getElementById('state-msg');
+    box.innerHTML = '<div class="card"><div class="icon">' + icon + '</div><h2>' + esc(title) + '</h2><p>' + esc(text) + '</p>' +
+      (withSurveyBtn && EVENT_ID ? '<a class="btn btn-primary" href="' + surveyUrl() + '">📝 Làm khảo sát</a>' : '') + '</div>';
+    box.classList.remove('hidden');
+  }
+
+  window.addEventListener('DOMContentLoaded', function () {
+    if (!EVENT_ID) { showMessage('⚠️', 'Link không hợp lệ', 'Link thiếu thông tin sự kiện. Vui lòng mở đúng link BTC cung cấp.', false); return; }
+    if (!TOKEN) { showMessage('🔒', 'Album dành cho người đã khảo sát', 'Hoàn thành khảo sát sau chương trình để nhận link xem ảnh sự kiện.', true); return; }
+    callApi('getGallery', { eventId: EVENT_ID, t: TOKEN, d: DEVICE_ID, ua: UA }).then(onGallery);
+  });
+
+  function onGallery(res) {
+    if (!res || !res.success) {
+      var code = res && res.code;
+      if (code === 'not_surveyed' || code === 'invalid') showMessage('🔒', 'Bạn chưa có quyền xem album', res.error, true);
+      else if (code === 'device_limit') showMessage('📱', 'Đã vượt giới hạn thiết bị', res.error, false);
+      else showMessage('⚠️', 'Không mở được album', (res && res.error) || 'Lỗi không xác định.', false);
+      return;
+    }
+    DATA = res.data;
+    var root = document.documentElement.style;
+    if (DATA.mau) root.setProperty('--primary', DATA.mau);
+    if (DATA.mauDam) root.setProperty('--primary-dark', DATA.mauDam);
+    document.title = 'Ảnh sự kiện — ' + (DATA.tenSuKien || '');
+
+    if (DATA.logo) { var lg = document.getElementById('hero-logo'); lg.src = DATA.logo; lg.classList.remove('hidden'); lg.onerror = function () { lg.classList.add('hidden'); }; }
+    if (DATA.tenChuongTrinh) { var pg = document.getElementById('hero-program'); pg.textContent = DATA.tenChuongTrinh; pg.classList.remove('hidden'); }
+    document.getElementById('hero-title').textContent = DATA.tenSuKien || 'Ảnh sự kiện';
+    document.getElementById('hero-hello').innerHTML = (DATA.hoTen ? 'Xin chào <b>' + esc(DATA.hoTen) + '</b> 👋 · ' : '') +
+      DATA.items.length + ' ảnh' + (DATA.albums.length > 1 ? ' · ' + DATA.albums.length + ' album' : '');
+    if (DATA.video && /^https?:\/\//.test(DATA.video.url)) {
+      document.getElementById('hero-actions').innerHTML =
+        '<a class="btn btn-outline" href="' + esc(DATA.video.url) + '" target="_blank" rel="noopener">🎬 ' + esc(DATA.video.label) + '</a>';
+    }
+
+    document.getElementById('state-loading').classList.add('hidden');
+    document.getElementById('gallery').classList.remove('hidden');
+
+    if (!DATA.items.length) {
+      document.getElementById('albums').innerHTML = '<div class="card"><div class="icon">🖼️</div><h2>Ảnh đang được cập nhật</h2><p>BTC đang tải ảnh sự kiện lên. Vui lòng quay lại sau ít phút nhé!</p></div>';
+      return;
+    }
+    renderChips();
+    renderAlbum(-1);
+  }
+
+  function renderChips() {
+    var chips = document.getElementById('chips');
+    if (DATA.albums.length < 2) { chips.classList.add('hidden'); return; }
+    var counts = DATA.albums.map(function () { return 0; });
+    DATA.items.forEach(function (it) { counts[it.a]++; });
+    var html = '<button class="chip active" data-a="-1">Tất cả<span class="n">' + DATA.items.length + '</span></button>';
+    DATA.albums.forEach(function (name, i) {
+      html += '<button class="chip" data-a="' + i + '">' + esc(name) + '<span class="n">' + counts[i] + '</span></button>';
+    });
+    chips.innerHTML = html;
+    chips.onclick = function (e) {
+      var b = e.target.closest('.chip');
+      if (!b) return;
+      chips.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('active', c === b); });
+      renderAlbum(Number(b.getAttribute('data-a')));
+      window.scrollTo({ top: document.getElementById('chips').offsetTop - 4, behavior: 'smooth' });
+    };
+  }
+
+  function renderAlbum(a) {
+    currentAlbum = a;
+    resetQueue();
+    visibleList = DATA.items.filter(function (it) { return a < 0 || it.a === a; });
+    var groups = [];
+    visibleList.forEach(function (it, i) {
+      var g = groups[groups.length - 1];
+      if (!g || g.a !== it.a) { g = { a: it.a, idx: [] }; groups.push(g); }
+      g.idx.push(i);
+    });
+    var showHeads = DATA.albums.length > 1;
+    var html = groups.map(function (g) {
+      return (showHeads ? '<div class="album-head"><h2>' + esc(DATA.albums[g.a]) + '</h2><span>' + g.idx.length + ' ảnh</span></div>' : '') +
+        '<div class="grid">' + g.idx.map(function (i) {
+          return '<button class="tile" data-i="' + i + '" aria-label="Ảnh ' + (i + 1) + '"><img alt=""></button>';
+        }).join('') + '</div>';
+    }).join('');
+    var box = document.getElementById('albums');
+    box.innerHTML = html;
+    box.onclick = function (e) {
+      var t = e.target.closest('.tile');
+      if (t) openLb(Number(t.getAttribute('data-i')));
+    };
+    box.querySelectorAll('.tile').forEach(function (t) {
+      var it = visibleList[Number(t.getAttribute('data-i'))];
+      if (thumbs[it.t]) setTile(t, thumbs[it.t]);
+      else observer.observe(t);
+    });
+  }
+
+  function setTile(tile, src) {
+    if (!src) { tile.classList.add('failed'); return; }
+    var img = tile.querySelector('img');
+    img.onload = function () { tile.classList.add('loaded'); };
+    img.src = src;
+  }
+
+  // ---- Tải thumbnail theo lô khi ô ảnh sắp xuất hiện trên màn hình ----
+  var BATCH = 24, MAX_INFLIGHT = 2;
+  var queue = [], queued = {}, inflight = 0, generation = 0;
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      observer.unobserve(en.target);
+      var it = visibleList[Number(en.target.getAttribute('data-i'))];
+      if (!it || thumbs[it.t] || queued[it.t]) return;
+      queued[it.t] = true;
+      queue.push(it);
+    });
+    pump();
+  }, { rootMargin: '800px 0px' });
+
+  function resetQueue() {
+    observer.disconnect();
+    queue = []; queued = {}; generation++;
+  }
+
+  function pump() {
+    while (inflight < MAX_INFLIGHT && queue.length) {
+      var batch = queue.splice(0, BATCH);
+      fetchThumbs(batch, generation, 0);
+    }
+  }
+
+  function fetchThumbs(batch, gen, attempt) {
+    inflight++;
+    callApi('getPhotoThumbs', {
+      eventId: EVENT_ID, t: TOKEN, d: DEVICE_ID, ua: UA,
+      list: batch.map(function (it) { return { id: it.t, s: it.ts }; })
+    }).then(function (res) {
+      inflight--;
+      if (!res.success) {
+        if (res.code === 'device_limit' || res.code === 'not_surveyed' || res.code === 'invalid') { onGallery(res); return; }
+        if (attempt < 2) { setTimeout(function () { fetchThumbs(batch, gen, attempt + 1); }, 1500 * (attempt + 1)); return; }
+        markFailed(batch, gen);
+        pump();
+        return;
+      }
+      Object.keys(res.data).forEach(function (id) { if (res.data[id]) thumbs[id] = res.data[id]; });
+      if (gen === generation) applyThumbs(batch);
+      pump();
+    }).catch(function () {
+      inflight--;
+      if (attempt < 2) setTimeout(function () { fetchThumbs(batch, gen, attempt + 1); }, 1500 * (attempt + 1));
+      else { markFailed(batch, gen); pump(); }
+    });
+  }
+
+  function tilesFor(it) {
+    var i = visibleList.indexOf(it);
+    return i < 0 ? null : document.querySelector('.tile[data-i="' + i + '"]');
+  }
+  function applyThumbs(batch) {
+    batch.forEach(function (it) { var t = tilesFor(it); if (t) setTile(t, thumbs[it.t] || ''); });
+  }
+  function markFailed(batch, gen) {
+    if (gen !== generation) return;
+    batch.forEach(function (it) { var t = tilesFor(it); if (t) t.classList.add('failed'); });
+  }
+
+  // ---- Lightbox ----
+  function openLb(i) {
+    lbIndex = i;
+    document.getElementById('lb').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    showLb();
+  }
+  function closeLb() {
+    document.getElementById('lb').classList.add('hidden');
+    document.body.style.overflow = '';
+    lbIndex = -1;
+  }
+  function step(d) {
+    if (lbIndex < 0) return;
+    var n = lbIndex + d;
+    if (n < 0 || n >= visibleList.length) return;
+    lbIndex = n;
+    showLb();
+  }
+  function showLb() {
+    var it = visibleList[lbIndex];
+    var img = document.getElementById('lb-img');
+    document.getElementById('lb-info').textContent = (lbIndex + 1) + ' / ' + visibleList.length + ' · ' + (DATA.albums[it.a] || '');
+    document.querySelector('.lb-prev').disabled = lbIndex === 0;
+    document.querySelector('.lb-next').disabled = lbIndex === visibleList.length - 1;
+    if (fulls[it.v]) {
+      img.classList.remove('blurry'); img.src = fulls[it.v];
+      document.getElementById('lb-spin').classList.add('hidden');
+    } else {
+      img.src = thumbs[it.t] || ''; img.classList.add('blurry');
+      document.getElementById('lb-spin').classList.remove('hidden');
+      loadFull(it).then(function () {
+        if (visibleList[lbIndex] !== it) return;
+        img.src = fulls[it.v] || img.src; img.classList.remove('blurry');
+        document.getElementById('lb-spin').classList.add('hidden');
+      });
+    }
+    // Tải trước ảnh kế tiếp cho mượt.
+    var nx = visibleList[lbIndex + 1];
+    if (nx && !fulls[nx.v]) loadFull(nx);
+  }
+
+  var fullPending = {};
+  function loadFull(it) {
+    if (fulls[it.v]) return Promise.resolve();
+    if (fullPending[it.v]) return fullPending[it.v];
+    fullPending[it.v] = callApi('getPhotoFull', { eventId: EVENT_ID, t: TOKEN, d: DEVICE_ID, ua: UA, id: it.v, s: it.vs })
+      .then(function (res) {
+        delete fullPending[it.v];
+        if (!res.success) return;
+        fulls[it.v] = res.data;
+        fullOrder.push(it.v);
+        while (fullOrder.length > 12) delete fulls[fullOrder.shift()]; // giới hạn bộ nhớ trên điện thoại
+      })
+      .catch(function () { delete fullPending[it.v]; });
+    return fullPending[it.v];
+  }
+
+  function downloadCurrent() {
+    var it = visibleList[lbIndex];
+    if (!it) return;
+    var btn = document.getElementById('lb-dl');
+    btn.disabled = true;
+    loadFull(it).then(function () {
+      btn.disabled = false;
+      var src = fulls[it.v];
+      if (!src) { alert('Chưa tải được ảnh, vui lòng thử lại.'); return; }
+      var m = src.match(/^data:([^;]+);base64,(.*)$/);
+      var bin = atob(m[2]), arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([arr], { type: m[1] }));
+      var ext = /png/.test(m[1]) ? '.png' : (/webp/.test(m[1]) ? '.webp' : '.jpg');
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = (it.n || 'anh').replace(/\.[a-z0-9]+$/i, '') + ext;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (lbIndex < 0) return;
+    if (e.key === 'Escape') closeLb();
+    else if (e.key === 'ArrowLeft') step(-1);
+    else if (e.key === 'ArrowRight') step(1);
+  });
+
+  // Vuốt trái/phải để chuyển ảnh, vuốt xuống để đóng.
+  (function () {
+    var x0 = null, y0 = null;
+    var stage = document.getElementById('lb-stage');
+    stage.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    stage.addEventListener('touchend', function (e) {
+      if (x0 === null) return;
+      var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1);
+      else if (dy > 90 && Math.abs(dy) > Math.abs(dx)) closeLb();
+      x0 = y0 = null;
+    }, { passive: true });
+    stage.addEventListener('click', function (e) { if (e.target === stage) closeLb(); });
+  })();
+</script>
+</body>
+</html>

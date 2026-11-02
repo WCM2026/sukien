@@ -566,6 +566,29 @@
     </div>
 
     <div class="card">
+      <div class="card-title">🔒 Ảnh bảo mật — chỉ người đã khảo sát mới xem được</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Khi BẬT: link ảnh 1 ở trên KHÔNG còn dùng. Ảnh nằm trong 1 thư mục Drive <b>riêng tư</b>; người nộp khảo sát xong nhận 1 link xem ảnh riêng (trên màn hình cảm ơn + trong mail qua <code>{NutAnhVideo}</code> / <code>{LinkAnhRieng}</code>). Mỗi link chỉ mở được trên số thiết bị giới hạn — người được chuyển tiếp link sẽ bị chặn. Link 2 (video) vẫn hoạt động như cũ và được hiện thêm trong trang xem ảnh. Khi TẮT: mọi thứ chạy như cũ.</p>
+      <label class="toggle-row">
+        <input type="checkbox" id="cfg-AnhBaoMat">
+        <span>Bật ảnh bảo mật cho sự kiện này</span>
+      </label>
+      <div class="field-row" style="margin-top:14px">
+        <div class="field"><label>Thư mục ảnh trên Drive (link hoặc ID)</label><input id="cfg-ThuMucAnhId" placeholder="https://drive.google.com/drive/folders/..."></div>
+        <div class="field"><label>Số thiết bị tối đa / 1 link</label><input id="cfg-GioiHanThietBi" type="number" min="1" max="10" placeholder="Mặc định 3"></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Cách xếp ảnh: mỗi <b>thư mục con</b> = 1 album (VD "01. Khai mạc", "02. Team building" — đánh số để sắp thứ tự). Ảnh để thẳng ở thư mục gốc vào album "Ảnh chung". Thư mục con bắt đầu bằng dấu <code>_</code> (VD "_anh_goc") sẽ bị bỏ qua. Thư mục phải thuộc (hoặc được chia sẻ cho) tài khoản chạy Apps Script và <b>không</b> bật "Bất kỳ ai có đường liên kết".</p>
+      <button class="btn btn-primary btn-full" style="margin-top:12px" id="photo-prepare-btn" onclick="admPrepareGallery()">🔄 Lưu &amp; quét / chuẩn bị album</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Chạy lại mỗi khi thêm/xoá ảnh trong thư mục — chỉ ảnh mới được xử lý. Khoảng 250–300 ảnh mỗi lượt (~4,5 phút), hệ thống tự chạy tiếp tới hết; giữ tab này mở trong lúc chạy.</p>
+      <div id="photo-prepare-status" style="margin-top:10px;font-size:13px"></div>
+      <div id="photo-stats" style="margin-top:12px;font-size:13px;color:var(--text)"></div>
+      <div class="field-row" style="margin-top:12px;align-items:end">
+        <div class="field"><label>Reset thiết bị cho MSNV (khi người dùng bị chặn nhầm)</label><input id="photo-reset-msnv" placeholder="Nhập MSNV"></div>
+        <div class="field"><button class="btn btn-outline btn-full" onclick="admResetPhotoDevices()" id="photo-reset-btn">♻️ Reset thiết bị</button></div>
+      </div>
+      <div id="photo-reset-status" style="font-size:13px"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">📧 Mail cảm ơn tự động sau khảo sát</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Khi bật, hệ thống tự gửi 1 email cảm ơn (từ hộp mail TTNB qua Microsoft Graph) NGAY khi ai đó nộp khảo sát xong — kèm link ảnh/video ở trên nếu có. Chỉ gửi được cho người có mã nhân viên trong danh sách VÀ sự kiện đã khai báo cột Email (tab "Cấu trúc dữ liệu") — khách tự điền (không có MSNV) sẽ không nhận được mail này.</p>
       <label class="toggle-row">
@@ -600,6 +623,7 @@
         <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{HoTen}')">{HoTen}</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{TenSuKien}')">{TenSuKien}</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{NutAnhVideo}')" title="Chèn sẵn nút bấm đẹp trỏ tới link ảnh/video 1 và 2 ở trên">🖼️ {NutAnhVideo}</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{LinkAnhRieng}')" title="Chỉ khi bật Ảnh bảo mật: URL xem ảnh riêng của từng người (dùng khi muốn tự chèn link dạng chữ)">🔒 {LinkAnhRieng}</button>
       </div>
       <p style="font-size:12px;color:var(--muted);margin-top:6px">{NutAnhVideo} tự tạo nút bấm đẹp trỏ tới link ảnh/video khai báo ở phần trên (bỏ qua nút nào chưa có link) — không cần tự chèn tay HTML.</p>
     </div>
@@ -1746,7 +1770,9 @@
       .then(admOnQuestionsLoaded)
       .catch(function (err) { admShowStatus('❌ Lỗi tải câu hỏi: ' + err.message, false); });
 
-    callApi('getConfigForClient', { eventId: admCurrentEventId }).then(admOnConfigLoaded);
+    // adminGetConfig (thay cho getConfigForClient): bản công khai ẩn LinkAnhVideo/ThuMucAnhId khi bật Ảnh bảo mật.
+    callApi('adminGetConfig', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE }).then(admOnConfigLoaded);
+    admLoadPhotoStats();
   }
 
   /* ---------- CẤU TRÚC DỮ LIỆU (column map) ---------- */
@@ -2701,7 +2727,7 @@
   /* ---------- CẤU HÌNH ---------- */
 
   var admRTE_KEYS = ['MoTaDangKy', 'MoTaKhaoSat', 'ThankYouText', 'MailCamOnNoiDung'];
-  var admCFG_CHECKBOX_KEYS = ['ChoTuDien', 'MailCamOnTuDong'];
+  var admCFG_CHECKBOX_KEYS = ['ChoTuDien', 'MailCamOnTuDong', 'AnhBaoMat'];
 
   // admCurrentConfigCache: giữ lại bản Config vừa tải để tab Gửi mail dùng
   // (nút "Dùng mẫu thư cảm ơn khảo sát" cần đọc MailCamOnTieuDe/NoiDung mà
@@ -2781,8 +2807,91 @@
       });
   }
 
+  /* ---------- ẢNH BẢO MẬT ---------- */
+
+  function admLoadPhotoStats() {
+    var box = document.getElementById('photo-stats');
+    if (!box) return;
+    box.innerHTML = '';
+    callApi('adminPhotoStats', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE }).then(function (res) {
+      if (!res.success) return;
+      var d = res.data;
+      if (!d.secure && !d.photosTotal && !d.tokens) return;
+      box.innerHTML =
+        '📷 Ảnh sẵn sàng: <b>' + d.photosReady + '</b> / ' + d.photosTotal +
+        ' &nbsp;·&nbsp; 🔑 Link đã cấp: <b>' + d.tokens + '</b>' +
+        ' &nbsp;·&nbsp; 👀 Đã mở xem: <b>' + d.viewed + '</b>' +
+        ' &nbsp;·&nbsp; ⛔ Đã dùng hết ' + d.deviceLimit + ' thiết bị: <b>' + d.deviceFull + '</b>';
+    });
+  }
+
+  // Lưu 3 khoá Ảnh bảo mật trước, rồi gọi adminPrepareGallery lặp tới khi xong
+  // (mỗi lượt server tự dừng trước giới hạn 6 phút của GAS).
+  async function admPrepareGallery() {
+    var btn = document.getElementById('photo-prepare-btn');
+    var st = document.getElementById('photo-prepare-status');
+    var payload = {
+      AnhBaoMat: document.getElementById('cfg-AnhBaoMat').checked ? 'true' : 'false',
+      ThuMucAnhId: document.getElementById('cfg-ThuMucAnhId').value.trim(),
+      GioiHanThietBi: document.getElementById('cfg-GioiHanThietBi').value.trim()
+    };
+    if (!payload.ThuMucAnhId) { st.innerHTML = '<span style="color:var(--danger)">❌ Nhập link/ID thư mục ảnh trước.</span>'; return; }
+    btn.disabled = true;
+    admPrepareGallery.lastReady = null;
+    try {
+      btn.innerHTML = '⏳ Đang lưu cấu hình...';
+      var sv = await callApi('adminSaveConfig', { eventId: admCurrentEventId, payload: payload, adminKey: admADMIN_KEY_VALUE });
+      if (!sv.success) { st.innerHTML = '<span style="color:var(--danger)">❌ ' + admEscapeHtml(sv.error) + '</span>'; return; }
+      var round = 0, res;
+      while (true) {
+        round++;
+        btn.innerHTML = '⏳ Đang xử lý lượt ' + round + '...';
+        st.innerHTML = 'Đang quét thư mục và tạo ảnh xem trước (lượt ' + round + ', mỗi lượt tối đa ~4,5 phút)...';
+        res = await callApi('adminPrepareGallery', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE });
+        if (!res.success) { st.innerHTML = '<span style="color:var(--danger)">❌ ' + admEscapeHtml(res.error) + '</span>'; return; }
+        if (res.remaining === 0 || round >= 15) break;
+        // Lượt vừa rồi không xử lý thêm được ảnh nào (ảnh mới tải lên Drive chưa có thumbnail) -> dừng, báo chạy lại sau.
+        if (round > 1 && res.ready === admPrepareGallery.lastReady) break;
+        admPrepareGallery.lastReady = res.ready;
+      }
+      admPrepareGallery.lastReady = null;
+      var albums = Object.keys(res.albums || {}).map(function (a) { return admEscapeHtml(a) + ' (' + res.albums[a] + ')'; }).join(', ');
+      var warn = '';
+      if (res.rootShared) warn += '<div style="color:var(--danger);margin-top:6px">⚠️ Thư mục ảnh đang chia sẻ dạng <b>' + admEscapeHtml(res.rootAccess) + '</b> — ai có link thư mục vẫn xem được trực tiếp. Hãy đổi về "Bị hạn chế" trên Drive.</div>';
+      if (res.publicFiles) warn += '<div style="color:var(--danger);margin-top:6px">⚠️ Có ' + res.publicFiles + ' ảnh đang bật "Bất kỳ ai có đường liên kết" — nên tắt chia sẻ công khai cho các ảnh này.</div>';
+      if (res.remaining) warn += '<div style="color:var(--warning);margin-top:6px">⏳ Còn ' + res.remaining + ' ảnh chưa xử lý xong (thường do Drive chưa tạo xong thumbnail cho ảnh vừa tải lên). Đợi vài phút rồi bấm chạy lại.</div>';
+      st.innerHTML = '<span style="color:var(--success)">✅ Sẵn sàng ' + res.ready + ' / ' + res.total + ' ảnh' +
+        (res.removed ? ' · đã gỡ ' + res.removed + ' ảnh không còn trong thư mục' : '') + '.</span>' +
+        (albums ? '<div style="margin-top:6px">Album: ' + albums + '</div>' : '') + warn;
+      admLoadPhotoStats();
+    } catch (err) {
+      st.innerHTML = '<span style="color:var(--danger)">❌ Lỗi kết nối: ' + admEscapeHtml(err.message) + '</span>';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔄 Lưu &amp; quét / chuẩn bị album';
+    }
+  }
+
+  function admResetPhotoDevices() {
+    var msnv = document.getElementById('photo-reset-msnv').value.trim();
+    var st = document.getElementById('photo-reset-status');
+    if (!msnv) { st.innerHTML = '<span style="color:var(--danger)">Nhập MSNV.</span>'; return; }
+    var btn = document.getElementById('photo-reset-btn');
+    btn.disabled = true;
+    callApi('adminResetPhotoDevices', { eventId: admCurrentEventId, msnv: msnv, adminKey: admADMIN_KEY_VALUE }).then(function (res) {
+      btn.disabled = false;
+      st.innerHTML = res.success
+        ? '<span style="color:var(--success)">✅ Đã reset thiết bị cho ' + admEscapeHtml(res.hoTen || msnv) + '. Người này mở lại link là xem được.</span>'
+        : '<span style="color:var(--danger)">❌ ' + admEscapeHtml(res.error) + '</span>';
+      admLoadPhotoStats();
+    }).catch(function (err) {
+      btn.disabled = false;
+      st.innerHTML = '<span style="color:var(--danger)">❌ ' + admEscapeHtml(err.message) + '</span>';
+    });
+  }
+
   function admSaveConfig() {
-    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu','MailCamOnTieuDe','GuidebookTieuDe','GuidebookAnh','GuidebookPdf'];
+    var keys = ['TenSuKien','TenNgan','TenChuongTrinh','ThoiGian','DiaDiem','Logo','MauChuDao','MauChuDaoDam','LinkAnhVideo','LinkAnhVideoLabel','LinkAnhVideo2','LinkAnhVideoLabel2','AnhMinhHoaAo','AnhMinhHoaMu','MailCamOnTieuDe','GuidebookTieuDe','GuidebookAnh','GuidebookPdf','ThuMucAnhId','GioiHanThietBi'];
     var payload = {};
     keys.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).value; });
     admRTE_KEYS.forEach(function (k) { payload[k] = document.getElementById('cfg-' + k).innerHTML; });
