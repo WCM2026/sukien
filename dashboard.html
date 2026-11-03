@@ -644,7 +644,8 @@
         <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{NutAnhVideo}')" title="Chèn sẵn nút bấm đẹp trỏ tới link ảnh/video 1 và 2 ở trên">🖼️ {NutAnhVideo}</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="admInsertCfgRtePlaceholder('{LinkAnhRieng}')" title="Chỉ khi bật Ảnh bảo mật: URL xem ảnh riêng của từng người (dùng khi muốn tự chèn link dạng chữ)">🔒 {LinkAnhRieng}</button>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:6px">{NutAnhVideo} tự tạo nút bấm đẹp trỏ tới link ảnh/video khai báo ở phần trên (bỏ qua nút nào chưa có link) — không cần tự chèn tay HTML.</p>
+      <button type="button" class="btn btn-outline btn-sm" style="margin-top:10px" onclick="admRestoreCamOnTemplate()">✨ Dùng mẫu thư cảm ơn mới (lời lẽ trân trọng)</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Thư cảm ơn tự động được đặt trong khung giao diện chung (dải màu chủ đạo + tên sự kiện ở đầu thư, ghi chú thư tự động ở cuối) — chỉ cần soạn phần lời thư. {NutAnhVideo} tự tạo nút bấm đẹp trỏ tới link ảnh/video khai báo ở phần trên (bỏ qua nút nào chưa có link) — không cần tự chèn tay HTML.</p>
     </div>
 
     <div class="card">
@@ -2283,9 +2284,9 @@
     var c = admCurrentConfigCache || {};
     if (document.getElementById('mail-body').textContent.trim() &&
         !confirm('Nội dung đang soạn sẽ bị THAY THẾ bằng mẫu Thư cảm ơn khảo sát đã cấu hình. Tiếp tục?')) return;
-    document.getElementById('mail-subject').value = c.MailCamOnTieuDe || 'Cảm ơn bạn đã tham gia khảo sát - {TenSuKien}';
-    document.getElementById('mail-body').innerHTML = c.MailCamOnNoiDung ||
-      '<p>Chào {HoTen},</p><p>Cảm ơn bạn đã dành thời gian hoàn thành khảo sát!</p>{NutAnhVideo}<p>Trân trọng,<br>Ban Tổ chức</p>';
+    var md = admMailMacDinh || {};
+    document.getElementById('mail-subject').value = c.MailCamOnTieuDe || md.MailCamOnTieuDe || 'Thư cảm ơn - {TenSuKien}';
+    document.getElementById('mail-body').innerHTML = c.MailCamOnNoiDung || md.MailCamOnNoiDung || '';
     document.getElementById('mf-only-camon').checked = true;
     document.getElementById('mail-mark-camon').checked = true;
     admApplyMailFilters();
@@ -2449,7 +2450,7 @@
     btn.innerHTML = '⏳ Đang gửi...'; btn.disabled = true;
     callApi('adminSendTestMail', {
       eventId: admCurrentEventId, mailToken: admMailToken, adminKey: admADMIN_KEY_VALUE,
-      payload: { subjectTemplate: subject, htmlTemplate: extracted.html, frontendBaseUrl: admFRONTEND_BASE_URL, attachments: extracted.attachments, sharedLink: sharedLink }
+      payload: { subjectTemplate: subject, htmlTemplate: extracted.html, frontendBaseUrl: admFRONTEND_BASE_URL, attachments: extracted.attachments, sharedLink: sharedLink, markAsCamOn: document.getElementById('mail-mark-camon').checked }
     }).then(function (res) {
       btn.innerHTML = '✉️ Gửi thử về email admin'; btn.disabled = false;
       if (!res.success) {
@@ -2754,8 +2755,21 @@
   // không phải gọi lại API riêng).
   var admCurrentConfigCache = {};
 
+  // Mẫu thư cảm ơn mặc định (server gửi kèm adminGetConfig) — cho nút "Dùng mẫu thư mới".
+  var admMailMacDinh = null;
+
+  function admRestoreCamOnTemplate() {
+    if (!admMailMacDinh) { admShowStatus('Chưa tải được mẫu mặc định, vui lòng chọn lại sự kiện.', false); return; }
+    var body = document.getElementById('cfg-MailCamOnNoiDung');
+    if (body.textContent.trim() && !confirm('Thay nội dung thư cảm ơn đang có bằng mẫu mới (lời lẽ trân trọng)?')) return;
+    document.getElementById('cfg-MailCamOnTieuDe').value = admMailMacDinh.MailCamOnTieuDe;
+    body.innerHTML = admMailMacDinh.MailCamOnNoiDung;
+    admShowStatus('✅ Đã chèn mẫu thư mới. Bấm "Lưu cấu hình" để áp dụng.', true);
+  }
+
   function admOnConfigLoaded(res) {
     if (!res.success) return;
+    if (res.macDinh) admMailMacDinh = res.macDinh;
     var c = res.data;
     admCurrentConfigCache = c;
     Object.keys(c).forEach(function (key) {
