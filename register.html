@@ -164,6 +164,29 @@
   .hat-pill:hover { border-color:var(--primary); }
   .hat-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:white; transform:scale(1.04); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
 
+  /* ---- Chọn khung giờ (cột ColKhungGio) ---- */
+  .slot-box { margin-top:20px; animation:fadeUp .3s ease; }
+  .slot-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+  .slot-label { font-size:13px; font-weight:700; color:var(--text); }
+  .slot-refresh { font-size:12px; font-weight:700; color:var(--primary); background:rgba(226,35,26,.08); border:none; border-radius:999px; padding:6px 12px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .slot-refresh:hover { background:rgba(226,35,26,.14); }
+  .slot-refresh:disabled { opacity:.6; cursor:wait; }
+  .slot-guide { font-size:12.5px; color:var(--muted); line-height:1.55; margin-bottom:10px; }
+  .slot-guide * { font-family:inherit !important; }
+  .slot-group-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:12px 0 8px; }
+  .slot-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr)); gap:8px; }
+  .slot-pill { padding:9px 4px 8px; border-radius:10px; border:1.5px solid var(--border); background:#fff; cursor:pointer; font-family:inherit; text-align:center; transition:transform .12s, border-color .12s, background .12s, box-shadow .12s; color:var(--text); }
+  .slot-pill:hover:not(:disabled) { border-color:var(--primary); }
+  .slot-time { display:block; font-size:15px; font-weight:800; letter-spacing:.2px; font-variant-numeric:tabular-nums; }
+  .slot-sub { display:block; font-size:10.5px; font-weight:600; color:var(--muted); margin-top:2px; }
+  .slot-sub.low { color:#b45309; }
+  .slot-pill:disabled { background:var(--bg); border-style:dashed; cursor:not-allowed; opacity:.55; }
+  .slot-pill:disabled .slot-time { text-decoration:line-through; text-decoration-thickness:1.5px; }
+  .slot-pill.selected { border-color:var(--primary); background:linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%); color:#fff; transform:scale(1.04); box-shadow:0 4px 12px -4px rgba(226,35,26,.5); }
+  .slot-pill.selected .slot-sub { color:rgba(255,255,255,.85); }
+  .slot-picked { margin-top:12px; font-size:13px; padding:10px 12px; border-radius:10px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-weight:600; }
+  .slot-empty { font-size:13px; color:var(--muted); padding:12px; background:var(--bg); border-radius:10px; text-align:center; }
+
   .locked-banner { background:#fff7ed; border:2px solid #fed7aa; border-radius:14px; padding:24px; text-align:center; }
   .locked-icon  { font-size:48px; margin-bottom:12px; }
   .locked-title { font-size:18px; font-weight:800; color:#9a3412; margin-bottom:8px; }
@@ -336,6 +359,15 @@
           <button type="button" class="hat-pill" onclick="selectHat('Đã có')">✅ Đã có</button>
           <button type="button" class="hat-pill" onclick="selectHat('Chưa có/Thất lạc')">🔁 Chưa có/Thất lạc</button>
         </div>
+      </div>
+      <div class="slot-box hidden" id="slot-section">
+        <div class="slot-head">
+          <div class="slot-label" id="slot-title">🕒 Chọn khung giờ</div>
+          <button type="button" class="slot-refresh" id="slot-refresh-btn" onclick="refreshSlots()">🔄 Cập nhật chỗ trống</button>
+        </div>
+        <div class="slot-guide" id="slot-guide"></div>
+        <div id="slot-grid-wrap"></div>
+        <div class="slot-picked hidden" id="slot-picked"></div>
       </div>
       <div class="reason-box hidden" id="reason-section">
         <div class="reason-label">📝 Lý do không tham dự</div>
@@ -519,6 +551,10 @@
   var selectedSizeQuan = null;
   var selectedSizeQuanOther = '';
 
+  // ---- Khung giờ (cột ColKhungGio) — danh sách khung + số chỗ do server tính ----
+  var slotInfo = null;      // { title, guide, cap, slots:[{key,label,used,full}] }
+  var selectedSlot = null;  // key "08:15"
+
   function onFoundEmployee(result) {
     var btn = document.getElementById('lookup-btn');
     btn.innerHTML = '🔍 Tìm'; btn.disabled = false;
@@ -567,6 +603,9 @@
         otherBox.classList.add('hidden');
       }
     }
+    selectedSlot = null;
+    slotInfo = currentEmployee.coKhungGio ? (currentEmployee.khungGioInfo || null) : null;
+    if (currentEmployee.coKhungGio) renderSlots();
     if (currentEmployee.coMu) {
       document.querySelectorAll('#hat-row .hat-pill').forEach(function (p) {
         p.classList.toggle('selected', p.textContent.indexOf(selectedHat) !== -1 && !!selectedHat);
@@ -586,10 +625,11 @@
       if (isTham && currentEmployee.coSizeAo && currentEmployee.sizeAo) rows += '<div class="locked-detail-row"><span class="locked-key">Size áo</span><span class="locked-val">'+currentEmployee.sizeAo+'</span></div>';
       if (isTham && currentEmployee.coSizeQuan && currentEmployee.sizeQuan) rows += '<div class="locked-detail-row"><span class="locked-key">Size quần</span><span class="locked-val">'+currentEmployee.sizeQuan+'</span></div>';
       if (isTham && currentEmployee.coMu && currentEmployee.mu) rows += '<div class="locked-detail-row"><span class="locked-key">Mũ</span><span class="locked-val">'+currentEmployee.mu+'</span></div>';
+      if (isTham && currentEmployee.coKhungGio && currentEmployee.khungGio) rows += '<div class="locked-detail-row"><span class="locked-key">Khung giờ</span><span class="locked-val">'+escHtml(currentEmployee.khungGio)+'</span></div>';
       document.getElementById('locked-detail').innerHTML = rows;
     } else {
       hide('locked-section'); show('attend-form-wrap'); show('attend-section');
-      hide('reason-section'); hide('size-section'); hide('size-quan-section'); hide('hat-section');
+      hide('reason-section'); hide('size-section'); hide('size-quan-section'); hide('hat-section'); hide('slot-section');
       document.getElementById('btn-yes').className = 'choice-btn';
       document.getElementById('btn-no').className  = 'choice-btn';
     }
@@ -640,8 +680,9 @@
       if (currentEmployee.coSizeAo) show('size-section'); else hide('size-section');
       if (currentEmployee.coSizeQuan) show('size-quan-section'); else hide('size-quan-section');
       if (currentEmployee.coMu) show('hat-section'); else hide('hat-section');
+      if (currentEmployee.coKhungGio) { show('slot-section'); refreshSlots(true); } else hide('slot-section');
     } else {
-      show('reason-section'); hide('size-section'); hide('size-quan-section'); hide('hat-section');
+      show('reason-section'); hide('size-section'); hide('size-quan-section'); hide('hat-section'); hide('slot-section');
     }
     updateUploadVisibility();
     showSubmitPreview(); show('step-submit');
@@ -660,6 +701,10 @@
     }
     if (selectedAttend && currentEmployee.coMu && selectedHat) {
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+selectedHat+'</strong></div>';
+    }
+    if (selectedAttend && currentEmployee.coKhungGio) {
+      var sl = findSlot(selectedSlot);
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Khung giờ</span><strong style="color:' + (sl ? 'inherit' : '#f05252') + '">' + (sl ? escHtml(sl.label) : 'Chưa chọn') + '</strong></div>';
     }
     if (selectedAttend && uploadRules) {
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">' + escHtml(uploadRules.title) + '</span><strong style="color:' + (uploadRules.required && !myFiles.length ? '#f05252' : 'inherit') + '">' + (myFiles.length ? myFiles.length + ' tệp' : (uploadRules.required ? 'Chưa nộp (bắt buộc)' : 'Chưa nộp')) + '</strong></div>';
@@ -694,6 +739,10 @@
     if (selectedAttend && currentEmployee.coMu && !selectedHat) {
       alert('Vui lòng chọn tình trạng mũ'); return;
     }
+    if (selectedAttend && currentEmployee.coKhungGio && !findSlot(selectedSlot)) {
+      document.getElementById('slot-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      alert('Vui lòng chọn khung giờ'); return;
+    }
     if (selectedAttend && uploadRules && uploadRules.required && myFiles.length < 1) {
       document.getElementById('step-upload').scrollIntoView({ behavior: 'smooth', block: 'center' });
       alert('Vui lòng tải lên ít nhất 1 tệp ở mục "' + uploadRules.title + '"'); return;
@@ -709,7 +758,8 @@
       msnv: currentEmployee.msnv, thamDu: selectedAttend, lyDo: !selectedAttend ? lyDo : '',
       sizeAo: (selectedAttend && currentEmployee.coSizeAo) ? selectedSize : '',
       sizeQuan: sizeQuanValue,
-      mu: (selectedAttend && currentEmployee.coMu) ? selectedHat : ''
+      mu: (selectedAttend && currentEmployee.coMu) ? selectedHat : '',
+      khungGio: (selectedAttend && currentEmployee.coKhungGio) ? selectedSlot : ''
     };
     callApi('submitRegistration', { eventId: EVENT_ID, payload: payload })
       .then(onSubmitDone)
@@ -726,6 +776,7 @@
     if (isTham && emp.coSizeAo && emp.sizeAo) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size áo</span><strong>'+emp.sizeAo+'</strong></div>';
     if (isTham && emp.coSizeQuan && emp.sizeQuan) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Size quần</span><strong>'+emp.sizeQuan+'</strong></div>';
     if (isTham && emp.coMu && emp.mu) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Mũ</span><strong>'+emp.mu+'</strong></div>';
+    if (isTham && emp.coKhungGio && emp.khungGio) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">Khung giờ</span><strong>'+escHtml(emp.khungGio)+'</strong></div>';
     if (isTham && uploadRules) html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:#64748b;font-size:14px">' + escHtml(uploadRules.title) + '</span><strong>' + myFiles.length + ' tệp</strong></div>';
     html += '</div>';
     if (isTham && uploadRules) html += '<div style="font-size:12px;color:#64748b;margin-top:8px">Cần bổ sung tài liệu? Bấm "Đăng ký nhân viên khác", nhập lại mã nhân viên của bạn để tải thêm.</div>';
@@ -741,6 +792,12 @@
       if (result.existing) { currentEmployee.dangKy = result.existing.dangKy; currentEmployee.lyDo = result.existing.lyDo; }
       onFoundEmployee({ success:true, data: currentEmployee }); return;
     }
+    if (!result.success && (result.slotFull || result.needSlot)) {
+      if (result.khungGioInfo) { slotInfo = result.khungGioInfo; }
+      selectedSlot = null; renderSlots(); showSubmitPreview();
+      document.getElementById('slot-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      alert(result.error); return;
+    }
     if (!result.success && result.needUpload) {
       document.getElementById('step-upload').scrollIntoView({ behavior: 'smooth', block: 'center' });
       alert(result.error); return;
@@ -753,6 +810,7 @@
       ? (selectedSizeQuan === 'Khác' ? selectedSizeQuanOther : selectedSizeQuan)
       : currentEmployee.sizeQuan;
     currentEmployee.mu     = selectedAttend && currentEmployee.coMu ? selectedHat : currentEmployee.mu;
+    if (selectedAttend && currentEmployee.coKhungGio) currentEmployee.khungGio = result.khungGio || (findSlot(selectedSlot) || {}).label || '';
     currentEmployee.lyDo   = !selectedAttend ? document.getElementById('reason-input').value.trim() : currentEmployee.lyDo;
     // Theo yêu cầu: sau khi đăng ký xong, ẩn toàn bộ form/thông tin khai báo phía trên,
     // chỉ còn lại 1 khối kết quả duy nhất (thông báo thành công + recap tình trạng).
@@ -791,6 +849,7 @@
   function resetForm() {
     currentEmployee = null; selectedAttend = null; selectedHat = null; selectedSize = null;
     selectedSizeQuan = null; selectedSizeQuanOther = '';
+    selectedSlot = null; slotInfo = null;
     document.getElementById('msnv-input').value = '';
     document.getElementById('lookup-status').innerHTML = '';
     document.getElementById('reason-input').value = '';
@@ -800,6 +859,89 @@
     document.getElementById('upload-list').innerHTML = '';
     show('step-msnv');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ---------- KHUNG GIỜ ---------- */
+
+  function findSlot(key) {
+    if (!slotInfo || !key) return null;
+    for (var i = 0; i < slotInfo.slots.length; i++) if (slotInfo.slots[i].key === key) return slotInfo.slots[i];
+    return null;
+  }
+
+  function renderSlots() {
+    var wrap = document.getElementById('slot-grid-wrap');
+    if (!slotInfo) {
+      wrap.innerHTML = '<div class="slot-empty"><span class="spinner-dark"></span> Đang tải khung giờ...</div>';
+      return;
+    }
+    document.getElementById('slot-title').textContent = '🕒 ' + (slotInfo.title || 'Chọn khung giờ');
+    document.getElementById('slot-guide').innerHTML = slotInfo.guide || '';
+    var cur = findSlot(selectedSlot);
+    if (cur && cur.full) { selectedSlot = null; cur = null; } // khung vừa chọn đã bị người khác lấy hết
+    if (!slotInfo.slots.length) {
+      wrap.innerHTML = '<div class="slot-empty">BTC chưa mở khung giờ nào. Vui lòng quay lại sau.</div>';
+    } else {
+      var groups = [
+        { name: 'Buổi sáng', from: 0, to: 12 * 60 },
+        { name: 'Buổi chiều', from: 12 * 60, to: 18 * 60 },
+        { name: 'Buổi tối', from: 18 * 60, to: 24 * 60 }
+      ];
+      var available = slotInfo.slots.filter(function (s) { return !s.full; }).length;
+      var html = '';
+      groups.forEach(function (g) {
+        var items = slotInfo.slots.filter(function (s) {
+          var p = s.key.split(':'), m = (+p[0]) * 60 + (+p[1]);
+          return m >= g.from && m < g.to;
+        });
+        if (!items.length) return;
+        html += '<div class="slot-group-title">' + g.name + '</div><div class="slot-grid">' + items.map(function (s) {
+          var sub = '';
+          if (s.full) sub = '<span class="slot-sub">Hết chỗ</span>';
+          else if (slotInfo.cap) {
+            var left = slotInfo.cap - s.used;
+            sub = '<span class="slot-sub' + (left <= 1 && slotInfo.cap > 1 ? ' low' : '') + '">Còn ' + left + ' chỗ</span>';
+          } else sub = '<span class="slot-sub">→ ' + escHtml(s.label.split(' - ')[1] || '') + '</span>';
+          return '<button type="button" class="slot-pill' + (s.key === selectedSlot ? ' selected' : '') + '"' +
+            (s.full ? ' disabled' : '') + ' onclick="selectSlot(\'' + s.key + '\')" aria-label="' + escHtml(s.label) + '">' +
+            '<span class="slot-time">' + escHtml(s.key) + '</span>' + sub + '</button>';
+        }).join('') + '</div>';
+      });
+      if (!available) html = '<div class="slot-empty">Tất cả khung giờ đã kín chỗ. Vui lòng liên hệ BTC.</div>' + html;
+      wrap.innerHTML = html;
+    }
+    var picked = document.getElementById('slot-picked');
+    if (cur) { picked.innerHTML = '✓ Bạn chọn khung <b>' + escHtml(cur.label) + '</b>'; picked.classList.remove('hidden'); }
+    else picked.classList.add('hidden');
+  }
+
+  function selectSlot(key) {
+    var s = findSlot(key);
+    if (!s || s.full) return;
+    selectedSlot = key;
+    renderSlots();
+    showSubmitPreview();
+  }
+
+  // Lấy lại số chỗ mới nhất. silent=true: gọi ngầm khi vừa chọn "Có tham dự".
+  function refreshSlots(silent) {
+    if (!currentEmployee || !currentEmployee.coKhungGio) return;
+    var btn = document.getElementById('slot-refresh-btn');
+    btn.disabled = true;
+    if (!slotInfo) renderSlots();
+    var msnvAtCall = currentEmployee.msnv;
+    callApi('getKhungGio', { eventId: EVENT_ID }).then(function (res) {
+      btn.disabled = false;
+      if (!currentEmployee || currentEmployee.msnv !== msnvAtCall) return;
+      if (res.success && res.enabled) {
+        var before = selectedSlot;
+        slotInfo = res.info; renderSlots(); showSubmitPreview();
+        if (before && !selectedSlot && !silent) alert('Khung giờ bạn chọn vừa hết chỗ, vui lòng chọn khung khác.');
+      } else if (!silent) alert('Không tải được khung giờ: ' + (res.error || ''));
+    }).catch(function (err) {
+      btn.disabled = false;
+      if (!silent) alert('Lỗi kết nối: ' + err.message);
+    });
   }
 
   /* ---------- UPLOAD TÀI LIỆU ---------- */
