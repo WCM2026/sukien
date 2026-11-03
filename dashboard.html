@@ -2893,7 +2893,8 @@
         round++;
         btn.innerHTML = '⏳ Đang xử lý lượt ' + round + '...';
         st.innerHTML = 'Đang quét thư mục và tạo ảnh xem trước (lượt ' + round + ', mỗi lượt ~1 phút)' +
-          (lastReady >= 0 && res ? ' — đã xong ' + res.ready + ' / ' + res.total + ' ảnh' : '') + '...';
+          (lastReady >= 0 && res ? ' — đã xong ' + res.ready + ' / ' + res.total + ' ảnh' +
+            (res.bundlesTotal ? ', ' + res.bundlesReady + ' / ' + res.bundlesTotal + ' gói thumbnail' : '') : '') + '...';
         try {
           res = await callApi('adminPrepareGallery', { eventId: admCurrentEventId, adminKey: admADMIN_KEY_VALUE });
         } catch (netErr) { res = { success: false, error: netErr.message, net: true }; }
@@ -2913,8 +2914,9 @@
         netFails = 0;
         if (res.remaining === 0) break;
         // 2 lượt liền không xử lý thêm được ảnh nào (thường do Drive chưa tạo xong thumbnail ảnh vừa tải lên) -> dừng.
-        noProgress = res.ready === lastReady ? noProgress + 1 : 0;
-        lastReady = res.ready;
+        var prog = res.progress != null ? res.progress : res.ready;
+        noProgress = prog === lastReady ? noProgress + 1 : 0;
+        lastReady = prog;
         if (noProgress >= 2) break;
       }
       var albums = Object.keys(res.albums || {}).map(function (a) { return admEscapeHtml(a) + ' (' + res.albums[a] + ')'; }).join(', ');
@@ -2923,6 +2925,7 @@
       if (res.publicFiles) warn += '<div style="color:var(--danger);margin-top:6px">⚠️ Có ' + res.publicFiles + ' ảnh đang bật "Bất kỳ ai có đường liên kết" — nên tắt chia sẻ công khai cho các ảnh này.</div>';
       if (res.remaining) warn += '<div style="color:var(--warning);margin-top:6px">⏳ Còn ' + res.remaining + ' ảnh chưa xử lý xong (thường do Drive chưa tạo xong thumbnail cho ảnh vừa tải lên). Đợi vài phút rồi bấm chạy lại.</div>';
       st.innerHTML = '<span style="color:var(--success)">✅ Sẵn sàng ' + res.ready + ' / ' + res.total + ' ảnh' +
+        (res.bundlesTotal ? ' (' + res.bundlesReady + ' / ' + res.bundlesTotal + ' gói thumbnail tải nhanh)' : '') +
         (res.removed ? ' · đã gỡ ' + res.removed + ' ảnh không còn trong thư mục' : '') + '.</span>' +
         (albums ? '<div style="margin-top:6px">Album: ' + albums + '</div>' : '') + warn;
       admLoadPhotoStats();

@@ -274,21 +274,32 @@
     img.src = src;
   }
 
-  // ---- Tải thumbnail theo lô khi ô ảnh sắp xuất hiện trên màn hình ----
-  var BATCH = 24, MAX_INFLIGHT = 2;
+  // ---- Tải thumbnail khi ô ảnh sắp xuất hiện trên màn hình ----
+  // Ưu tiên "gói thumbnail" (BTC đã dựng sẵn: 1 request = 24 ảnh, 1 lần đọc
+  // Drive). Ảnh chưa có gói thì tải lẻ theo lô như cũ.
+  var BATCH = 12, MAX_INFLIGHT = 3;
   var queue = [], queued = {}, inflight = 0, generation = 0;
+  var bundleState = {};   // bundleIndex -> 'loading' | 'done' (giữ qua các lần đổi album)
 
   var observer = new IntersectionObserver(function (entries) {
     entries.forEach(function (en) {
       if (!en.isIntersecting) return;
       observer.unobserve(en.target);
       var it = visibleList[Number(en.target.getAttribute('data-i'))];
-      if (!it || thumbs[it.t] || queued[it.t]) return;
+      if (!it || thumbs[it.t]) return;
+      if (it.b != null && DATA.bundles && DATA.bundles[it.b]) {
+        if (bundleState[it.b]) return;           // gói đang tải / đã tải
+        if (queued['b' + it.b]) return;
+        queued['b' + it.b] = true;
+        queue.push({ bundle: it.b });
+        return;
+      }
+      if (queued[it.t]) return;
       queued[it.t] = true;
       queue.push(it);
     });
     pump();
-  }, { rootMargin: '800px 0px' });
+  }, { rootMargin: '900px 0px' });
 
   function resetQueue() {
     observer.disconnect();
@@ -297,9 +308,48 @@
 
   function pump() {
     while (inflight < MAX_INFLIGHT && queue.length) {
-      var batch = queue.splice(0, BATCH);
+      if (queue[0].bundle != null) { fetchBundle(queue.shift().bundle, 0); continue; }
+      var batch = [];
+      while (queue.length && batch.length < BATCH && queue[0].bundle == null) batch.push(queue.shift());
       fetchThumbs(batch, generation, 0);
     }
+  }
+
+  function isFatal(res) {
+    if (res.code === 'device_limit' || res.code === 'not_surveyed' || res.code === 'invalid') { onGallery(res); return true; }
+    return false;
+  }
+
+  function fetchBundle(bi, attempt) {
+    var b = DATA.bundles[bi];
+    bundleState[bi] = 'loading';
+    inflight++;
+    callApi('getPhotoBundle', { eventId: EVENT_ID, t: TOKEN, d: DEVICE_ID, ua: UA, id: b.id, s: b.s }).then(function (res) {
+      inflight--;
+      if (!res.success) {
+        if (isFatal(res)) return;
+        if (attempt < 2) { setTimeout(function () { fetchBundle(bi, attempt + 1); }, 1500 * (attempt + 1)); return; }
+        bundleFallback(bi);
+        pump();
+        return;
+      }
+      bundleState[bi] = 'done';
+      Object.keys(res.data || {}).forEach(function (id) { if (res.data[id]) thumbs[id] = res.data[id]; });
+      applyThumbs(visibleList.filter(function (it) { return it.b === bi; }));
+      pump();
+    }).catch(function () {
+      inflight--;
+      if (attempt < 2) setTimeout(function () { fetchBundle(bi, attempt + 1); }, 1500 * (attempt + 1));
+      else { bundleFallback(bi); pump(); }
+    });
+  }
+
+  // Gói lỗi -> tải lẻ từng ảnh của gói đó.
+  function bundleFallback(bi) {
+    bundleState[bi] = 'done';
+    visibleList.forEach(function (it) {
+      if (it.b === bi && !thumbs[it.t] && !queued[it.t]) { it.b = null; queued[it.t] = true; queue.push(it); }
+    });
   }
 
   function fetchThumbs(batch, gen, attempt) {
@@ -310,7 +360,7 @@
     }).then(function (res) {
       inflight--;
       if (!res.success) {
-        if (res.code === 'device_limit' || res.code === 'not_surveyed' || res.code === 'invalid') { onGallery(res); return; }
+        if (isFatal(res)) return;
         if (attempt < 2) { setTimeout(function () { fetchThumbs(batch, gen, attempt + 1); }, 1500 * (attempt + 1)); return; }
         markFailed(batch, gen);
         pump();
